@@ -2,7 +2,7 @@ import LinearAlgebra
 
 include("statistics/infinite/committors.jl")
 
-abstract type AbstractTPTSets end
+# abstract type AbstractTPTStatistic end
 
 struct TPTSets{U<:Integer}
     S::Vector{U}
@@ -11,12 +11,14 @@ struct TPTSets{U<:Integer}
     C::Vector{U}
     A_true::Vector{U}
     B_true::Vector{U}
+    C_plus::Union{Vector{U}, Nothing}
 end
 
 function TPTSets(
     S::Vector{U}, 
     A::Vector{U}, 
-    B::Vector{U}) where {U<:Integer}
+    B::Vector{U};
+    C_plus::Union{Vector{T}, Nothing} = nothing) where {T<:Real, U<:Integer}
 
     # Scrub any accidental repeated indices
     S = unique(S)
@@ -41,14 +43,14 @@ function TPTSets(
     A_true = setdiff(A, intersect(A, B))
     B_true = setdiff(B, intersect(A, B))
 
-    return TPTSets(S, A, B, C, A_true, B_true)
+    return TPTSets(S, A, B, C, A_true, B_true, C_plus)
 end
 
 ########################################################################
 ########################################################################
 ########################################################################
 
-struct TPTHomog{T<:Real, U<:Integer} <: AbstractTPTSets
+struct TPTHomog{T<:Real, U<:Integer} 
     sets::TPTSets{U}
     P::Matrix{T}
     pi_stat::Vector{T}
@@ -86,7 +88,12 @@ function TPTHomog(
     pi_stat = abs.(LinearAlgebra.normalize(LinearAlgebra.eigvecs(transpose(P))[:,size(P)[1]], 1))
     P_minus = [(pi_stat[j]/pi_stat[i])*P[j,i] for i in sets.S, j in sets.S]
     qp = q_plus(P, sets.A_true, sets.B_true, sets.C) 
-    qm = q_minus(P_minus, sets.A_true, sets.B_true, sets.C) 
+    qm = q_minus(P_minus, sets.A_true, sets.B_true, sets.C)
+
+    # C_plus is the set of indices i outside of B such that there exists a j in S
+    # such that i can reach j in one step and j is reactive-connected to B
+    C_plus = [i for i in setdiff(S, B) if sum(P[i, j]*qp[j] for j in S) > 0.0] 
+    sets = TPTSets(S, A, B, C_plus = C_plus)
 
     return TPTHomog(sets, P, pi_stat, qp, qm)
 end
@@ -95,11 +102,20 @@ end
 ########################################################################
 ########################################################################
 
-function Pstoc(n)
-    P = rand(n, n)
-    for i = 1:n
-        P[i,:] = P[i, :]/sum(P[i, :])
-    end
-
-    return P
+struct TPTStats{T<:Real, U<:Integer}
+    reactive_density::Vector{T}
+    normalized_reactive_density::Vector{T}
+    reactive_current::Matrix{T}
+    forward_current::Matrix{T}
+    reactive_rate_vanE::T
+    transition_time_vanE::T
+    remaining_time::Vector{T}
+    hitting_distribution::Matrix{T}
+    hitting_locations::Vector{U}
 end
+
+
+########################################################################
+########################################################################
+########################################################################
+
