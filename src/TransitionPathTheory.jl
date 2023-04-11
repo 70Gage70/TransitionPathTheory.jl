@@ -1,5 +1,5 @@
 module TransitionPathTheory
 
-# Calculate TPT
+# Calculate TPT test
 
 end
