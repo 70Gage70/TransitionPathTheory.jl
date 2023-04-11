@@ -1,5 +1,5 @@
 module TransitionPathTheory
 
-# Write your package code here.
+# Calculate TPT
 
 end

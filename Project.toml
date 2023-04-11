@@ -1,7 +1,7 @@
 name = "TransitionPathTheory"
 uuid = "8e25bcd3-68d4-49ab-a21a-eececf317700"
 authors = ["Gage Bonner <gage.bonner@gmail.com>"]
-version = "1.0.0-DEV"
+version = "0.1"
 
 [compat]
 julia = "1.8"
