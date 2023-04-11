@@ -1,3 +1,5 @@
+using HDF5
+
 include("statistics/infinite/remaining-time.jl")
 include("statistics/infinite/hitting-distribution.jl")
 include("statistics/infinite/time-cdf.jl")
@@ -40,6 +42,8 @@ function tpt_infinite(tpt::TPTHomog)
     tcdf, tcdf_AB = time_cdf(tpt)
 
     res = TPTStats(
+        tpt.q_plus,
+        tpt.q_minus,
         muAB,
         muAB/sum(muAB),
         fij,
@@ -56,11 +60,33 @@ function tpt_infinite(tpt::TPTHomog)
     return res
 end
 
-function Pstoc(n)
-    P = rand(n, n)
-    for i = 1:n
-        P[i,:] = P[i, :]/sum(P[i, :])
+"""
+    tpt_write(outfile, tpt_homog, tpt_res)
+
+Write TPT indices from `tpt_homog` and statistics from `tpt_res` to the file `outfile`, which must be in the `.h5` format.
+
+The indices are found in `tpt_homog/inds` and the results are in `tpt_homog/stats`.
+"""
+function tpt_write(outfile::String, tpt_homog::TPTHomog, tpt_res::TPTStats)
+    @assert outfile[end-2:end] == ".h5" "The output file must be of the form filename.h5"
+
+    fout = h5open(outfile, "w")
+
+    tpt = create_group(fout, "tpt_homog")
+
+    inds = create_group(tpt, "inds")
+    for fn in fieldnames(typeof(tpt_homog.sets))
+        inds["$fn"] = getfield(tpt_homog.sets, fn)
     end
 
-    return P
+    stats = create_group(tpt, "stats")
+    for fn in fieldnames(typeof(tpt_res))
+        stats["$fn"] = getfield(tpt_res, fn)
+    end
+
+    close(fout)
+
+    @info "TPT results written to $(outfile)."
+
+    return 
 end

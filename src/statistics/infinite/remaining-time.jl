@@ -1,5 +1,10 @@
 using LinearAlgebra
 
+"""
+    remaining_time(tpt)
+
+Compute the remaining time for each state in S.
+"""
 function remaining_time(tpt::TPTHomog) 
     S = tpt.sets.S
     C_plus = tpt.sets.C_plus

@@ -1,6 +1,16 @@
 using LinearAlgebra
 
+"""
+    time_cdf(tpt; cdf_thresh)
+
+Compute the cdf of the reactive hitting time from any state, as well as the weighted cdf time from A.
+
+### Optional Arguments
+- `cdf_thresh`: The cdf value at which the calculation should stop, default 0.95.
+"""
 function time_cdf(tpt::TPTHomog; cdf_thresh = 0.95)
+    @assert 0.0 < cdf_thresh < 1.0
+
     S = tpt.sets.S
     A_true = tpt.sets.A_true
     B_true = tpt.sets.B_true
