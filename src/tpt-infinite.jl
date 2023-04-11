@@ -1,5 +1,6 @@
 include("statistics/infinite/remaining-time.jl")
 include("statistics/infinite/hitting-distribution.jl")
+include("statistics/infinite/time-cdf.jl")
 
 """
     tpt_infinite(tpt)
@@ -35,6 +36,9 @@ function tpt_infinite(tpt::TPTHomog)
     # hitting distribution
     rij, ri = hitting_distribution(tpt)
 
+    # time cdf
+    tcdf, tcdf_AB = time_cdf(tpt)
+
     res = TPTStats(
         muAB,
         muAB/sum(muAB),
@@ -44,7 +48,9 @@ function tpt_infinite(tpt::TPTHomog)
         tAB,
         tAB_rem,
         rij,
-        ri
+        ri,
+        tcdf,
+        tcdf_AB,
     )
 
     return res

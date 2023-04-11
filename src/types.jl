@@ -112,6 +112,8 @@ struct TPTStats{T<:Real, U<:Integer}
     remaining_time::Vector{T}
     hitting_distribution::Matrix{T}
     hitting_locations::Vector{U}
+    time_cdf::Matrix{T}
+    time_cdf_AB::Vector{T}
 end
 
 
