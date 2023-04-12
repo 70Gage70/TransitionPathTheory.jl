@@ -52,7 +52,7 @@ function TPTHomog(
         rowsum = sum(P[i, :])
 
         if !(rowsum ≈ 1.0)
-            @assert rowsum < 1.0 "row $i of P has a sum greater than 1."
+            @assert rowsum < 1.0 "row $i of P has a sum greater than 1 ($rowsum)."
             substoc = true
         end
     end
