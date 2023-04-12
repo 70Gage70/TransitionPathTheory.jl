@@ -34,12 +34,12 @@ function time_cdf(tpt::TPTHomog; cdf_thresh = 0.95)
         cdf_dist = hcat(cdf_dist, cdf_dist[:, end] + Mpow * b)
     end
 
-    # cdf to go from A to be is cdf_dist[i] weighted by pi[i] for i in A
-    A_cdf = sum(pi_stat[i]*cdf_dist[i, :]/sum(pi_stat[j] for j in A_true) for i in A_true)
-
     # expand cdf with zeros so results are in S
     cdf_dist_S = zeros(length(S), size(cdf_dist, 2))
     cdf_dist_S[C_plus, :] = cdf_dist
+
+    # cdf to go from A to be is cdf_dist[i] weighted by pi[i] for i in A
+    A_cdf = sum(pi_stat[i]*cdf_dist_S[i, :]/sum(pi_stat[j] for j in A_true) for i in A_true)
 
     return cdf_dist_S, A_cdf
 end
