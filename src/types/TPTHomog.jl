@@ -83,3 +83,15 @@ function TPTHomog(
 
     return TPTHomog(sets, P, pi_stat, qp, qm)
 end
+
+function Base.show(io::IO, x::TPTHomog)
+    print(io, "TPTHomog[S(")
+    show(io, length(x.sets.S))
+    print(io, "), A(")
+    show(io, length(x.sets.A))
+    print(io, "), B(")
+    show(io, length(x.sets.B))
+    print("), AB_int(")
+    show(io, length(intersect(x.sets.A, x.sets.B)))
+    print(")]")
+end

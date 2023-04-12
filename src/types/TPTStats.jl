@@ -18,3 +18,9 @@ struct TPTStats{T<:Real, U<:Integer}
     time_cdf::Matrix{T}
     time_cdf_AB::Vector{T}
 end
+
+function Base.show(io::IO, x::TPTStats)
+    print(io, "TPTStats[")
+    show(io, length(x.q_plus))
+    print("]")
+end

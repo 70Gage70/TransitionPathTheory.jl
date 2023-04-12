@@ -50,3 +50,15 @@ function TPTSets(
 
     return TPTSets(S, A, B, C, A_true, B_true, C_plus)
 end
+
+function Base.show(io::IO, x::TPTSets)
+    print(io, "TPTSets[S(")
+    show(io, length(x.S))
+    print(io, "), A(")
+    show(io, length(x.A))
+    print(io, "), B(")
+    show(io, length(x.B))
+    print("), AB_int(")
+    show(io, length(intersect(x.A, x.B)))
+    print(")]")
+end
