@@ -1,9 +1,11 @@
 """
-    TPTStats{T, U}
+    TPTHomogStatResult{T, U}
 
-A container for all the results of TPT calculations.  
+A container for all the results of a homogeneous, stationary TPT calculations.  
 """
-struct TPTStats{T<:Real, U<:Integer}
+struct TPTHomogStatResult{T<:Real, U<:Integer}
+    sets::TPTSets{U}
+    pi_stationary::Vector{T}
     q_plus::Vector{T}
     q_minus::Vector{T}
     reactive_density::Vector{T}
@@ -19,8 +21,8 @@ struct TPTStats{T<:Real, U<:Integer}
     time_cdf_AB::Vector{T}
 end
 
-function Base.show(io::IO, x::TPTStats)
-    print(io, "TPTStats[")
+function Base.show(io::IO, x::TPTHomogStatResult)
+    print(io, "TPTHomogStatResult[")
     show(io, length(x.q_plus))
     print("]")
 end

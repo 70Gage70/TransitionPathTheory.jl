@@ -6,7 +6,7 @@ using LinearAlgebra
 Compute the cdf of the reactive hitting time from any state, as well as the weighted cdf time from A.
 
 ### Optional Arguments
-- `cdf_thresh`: The cdf value at which the calculation should stop, default 0.95.
+- `cdf_thresh`: The cdf value at which the calculation should stop, default 0.5.
 """
 function time_cdf(tpt::TPTHomog; cdf_thresh = 0.95)
     @assert 0.0 < cdf_thresh < 1.0
@@ -14,6 +14,7 @@ function time_cdf(tpt::TPTHomog; cdf_thresh = 0.95)
     S = tpt.sets.S
     A_true = tpt.sets.A_true
     B_true = tpt.sets.B_true
+    C = tpt.sets.C
     C_plus = tpt.sets.C_plus
     qp = tpt.q_plus
     P = tpt.P
@@ -24,22 +25,29 @@ function time_cdf(tpt::TPTHomog; cdf_thresh = 0.95)
     M = [qp[j]*P[i, j]/sum(P[i, k]*qp[k] for k in S) for i in C_plus, j in C_plus]
     b = [sum(qp[j]*P[i, j]/sum(P[i, k]*qp[k] for k in S) for j in B_true) for i in C_plus]
     
-    cdf_dist = zeros(length(C_plus), 1) # probability of reaching B in 0 steps is 0.0
-    cdf_dist = hcat(cdf_dist, b) # probability of reaching B in 1 step is b
+    cdf_dist = zeros(length(S), 2) # probability of reaching B in 0 steps is 0.0
+    cdf_dist[C_plus] = b # probability of reaching B in 1 step is b
 
-    # higher terms in the distribution come from hitting b with powers of M
+    A_cdf = zeros(length(S))
+
     Mpow = I
-    while minimum(cdf_dist[:, end]) < cdf_thresh
+    counter = 1
+    while A_cdf[end] < cdf_thresh
+        counter = counter + 1
         Mpow = Mpow * M
-        cdf_dist = hcat(cdf_dist, cdf_dist[:, end] + Mpow * b)
+        cdf_dist = hcat(cdf_dist, cdf_dist[:, end])
+        cdf_dist[C_plus, end] = cdf_dist[C_plus, end] + Mpow * b
+
+        A_cdf = sum(pi_stat[i]*cdf_dist[i, :]/sum(pi_stat[j] for j in A_true) for i in A_true)
+
+        if counter >= 500
+            @warn "The time cdf is converging very slowly. Breaking after 500 terms."
+            break
+        end
     end
 
-    # expand cdf with zeros so results are in S
-    cdf_dist_S = zeros(length(S), size(cdf_dist, 2))
-    cdf_dist_S[C_plus, :] = cdf_dist
-
     # cdf to go from A to be is cdf_dist[i] weighted by pi[i] for i in A
-    A_cdf = sum(pi_stat[i]*cdf_dist_S[i, :]/sum(pi_stat[j] for j in A_true) for i in A_true)
+    # A_cdf = sum(pi_stat[i]*cdf_dist[i, :]/sum(pi_stat[j] for j in A_true) for i in A_true)
 
-    return cdf_dist_S, A_cdf
+    return cdf_dist, A_cdf
 end

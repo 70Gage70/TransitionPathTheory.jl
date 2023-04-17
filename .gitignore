@@ -73,6 +73,7 @@ Temporary Items
 
 # workspace
 /src/workspaces.jl
+/src/types_loader.jl
 
 # Test
 *.txt
