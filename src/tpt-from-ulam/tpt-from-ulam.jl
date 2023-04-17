@@ -6,10 +6,10 @@ Removes the last state from indices and statistics of tpt_result. Used for appli
 Note that this does not change the  actual results of the TPT calculation, it is only for convenient reference
 to  TPT statistics without the omega state.
 """
-function remove_omega(tpt_result::TPTHomogStatResult)
+function remove_omega(tpt_result::AbstractTPTHomogResult)
     omega_tpt_result = []
 
-    for fn in fieldnames(TPTHomogStatResult)
+    for fn in fieldnames(typeof(tpt_result))
         if fn == :sets
             omega = [tpt_result.sets.S[end]]
             omega_sets = TPTSets([setdiff(getfield(tpt_result.sets, fn), omega) for fn in fieldnames(TPTSets)]...)
@@ -25,13 +25,19 @@ function remove_omega(tpt_result::TPTHomogStatResult)
                 else
                     push!(omega_tpt_result, gf[1:end-1, :])
                 end
+            elseif typeof(gf) <: AbstractArray
+                if size(gf, 2) == size(gf, 3)
+                    push!(omega_tpt_result, gf[:, 1:end-1, 1:end-1])
+                else
+                    # shouldn't happen
+                end                
             else
                 push!(omega_tpt_result, gf) # quantity is a scalar, can't remove anything
             end
         end
     end
     
-    omega_tpt_result = TPTHomogStatResult(omega_tpt_result...)
+    omega_tpt_result = typeof(tpt_result)(omega_tpt_result...)
 
     return omega_tpt_result
 end
