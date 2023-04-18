@@ -11,7 +11,18 @@ The main function of TPT is to compute statistics of "reactive" trajectories, na
 
 ## Installation
 
-_Under construction._
+In the Julia REPL, run the following code and follow the prompts:
+
+```julia
+using Pkg
+Pkg.add(TransitionPathTheory)
+```
+
+Make the package available to use in your code by including the following line:
+
+```julia
+using TransitionPathTheory
+```
 
 ## Quickstart
 
@@ -23,11 +34,19 @@ B = [9, 10]     # the target indices
 # validate and setup a homogenous TPT problem
 tpt_homog = TPTHomog(P, A, B)
 
-# compute all the statistics using infinite time TPT
-tpt_stats = tpt_infinite(tpt_homog)
+# compute TPT statistics in the stationary case
+tpt_stat = tpt_stationary_statistics(tpt_homog)
+tpt_stat.q_plus # the forward committor
+tpt_stat.normalized_reactive_density # normalized muAB
+
+# compute TPT statistics in the nonstationary case
+tpt_nonstat = tpt_nonstationary_statistics(tpt_homog)
+tpt_stat.q_plus # the forward committor is the same for homogeneous problems
+tpt_stat.normalized_reactive_density # normalized muAB; columns refer to increasing time
 
 # write the results to an .h5 file
-tpt_write("tpt_stats.h5", tpt_homog, tpt_stats)
+tpt_write("tpt_stat.h5", tpt_stat)
+tpt_write("tpt_nonstat.h5", tpt_nonstat)
 ```
 
 
