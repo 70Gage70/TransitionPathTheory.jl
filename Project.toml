@@ -1,7 +1,7 @@
 name = "TransitionPathTheory"
 uuid = "8e25bcd3-68d4-49ab-a21a-eececf317700"
 authors = ["Gage Bonner <gage.bonner@gmail.com>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
