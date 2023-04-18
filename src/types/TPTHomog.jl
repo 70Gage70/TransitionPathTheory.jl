@@ -46,18 +46,10 @@ function TPTHomog(
     @assert size(P, 1) == size(P, 2) "P must be square."
     @assert all(P .>= 0.0) "Entries of P can not be negative."
 
-    # ensure that P is at least sub-stochastic
-    substoc = false
-    for i = 1:1:size(P, 1)
-        rowsum = sum(P[i, :])
-
-        if !(rowsum ≈ 1.0)
-            @assert rowsum < 1.0 "row $i of P has a sum greater than 1 ($rowsum)."
-            substoc = true
-        end
+    # ensure that P is stochastic
+    for i = 1:size(P, 1)
+        @assert sum(P[i, :]) ≈ 1.0 "row $i of P is not stochastic to within float tolerance."
     end
-
-    if substoc @info "P is sub-stochastic." end
 
     # ensure P represents an ergodic Markov chain
     Padj::Matrix{Int64} = [P[i,j] != 0.0 ? 1 : 0 for i in 1:size(P, 1), j in 1:size(P, 1)]
