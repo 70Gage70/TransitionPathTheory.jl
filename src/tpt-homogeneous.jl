@@ -1,8 +1,8 @@
 using HDF5
 
-include("statistics/homogenous/remaining-time.jl")
-include("statistics/homogenous/hitting-distribution.jl")
-include("statistics/homogenous/time-cdf.jl")
+include("statistics/homogeneous/remaining-time.jl")
+include("statistics/homogeneous/hitting-distribution.jl")
+include("statistics/homogeneous/time-cdf.jl")
 
 """
     tpt_stationary_statistics(tpt_homog)

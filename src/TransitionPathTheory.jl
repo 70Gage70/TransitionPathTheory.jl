@@ -1,12 +1,12 @@
 module TransitionPathTheory
 
 export 
-    tpt_infinite, tpt_write, # from tpt-infinite.jl
+    tpt_stationary_statistics, tpt_nonstationary_statistics, tpt_write, # from tpt-homogeneous.jl
     P_stoc, # from helpers.jl
-    TPTStats, TPTHomog, TPTSets, show # from types.jl
+    AbstractTPTHomogResult, TPTHomogStatResult, TPTHomogNonStatResult, TPTHomog, TPTSets, show # from types.jl
 
 include("types.jl")
-include("tpt-infinite.jl")
+include("tpt-homogeneous.jl")
 include("helpers.jl")
 
 end

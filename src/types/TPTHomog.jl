@@ -1,7 +1,7 @@
 import LinearAlgebra
 import Graphs
 
-include("../statistics/homogenous/committors.jl")
+include("../statistics/homogeneous/committors.jl")
 
 """
     TPTHomog{T, U}

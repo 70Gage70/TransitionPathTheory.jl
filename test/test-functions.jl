@@ -8,29 +8,29 @@ function test_eq(a::Any, b::Any)
     end
 end
 
-function tpt_test(ftest::String, tpt_homog::TPTHomog, tpt_res::TPTStats)
+function tpt_test(ftest::String, tpt_result::AbstractTPTHomogResult)
     testf = h5open(ftest)
 
-    # inds
-    for fn in fieldnames(typeof(tpt_homog.sets))
-        tpt = getfield(tpt_homog.sets, fn)
-        test = read(testf["tpt_homog/inds/$fn"])
-
-        if !test_eq(tpt, test) 
-            @error("$fn mismatch") 
-            return false
-        end 
-    end
-
-    # stats
-    for fn in fieldnames(typeof(tpt_res))
-        tpt = getfield(tpt_res, fn)
-        test = read(testf["tpt_homog/stats/$fn"])
+    for fn in fieldnames(typeof(tpt_result))
+        if fn == :sets
+            for fns in fieldnames(typeof(tpt_result.sets))
+                tpt = getfield(tpt_result.sets, fns)
+                test = read(testf["tpt_homog/indices/$fns"])
         
-        if !test_eq(tpt, test) 
-            @error("$fn mismatch") 
-            return false
-        end 
+                if !test_eq(tpt, test) 
+                    @error("$fns mismatch") 
+                    return false
+                end 
+            end
+        else
+            tpt = getfield(tpt_result, fn)
+            test = read(testf["tpt_homog/statistics/$fn"])
+            
+            if !test_eq(tpt, test) 
+                @error("$fn mismatch") 
+                return false
+            end 
+        end
     end
 
     close(testf)
