@@ -79,27 +79,32 @@ function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 10
     i0 = [i in A_true ? 1.0/length(A_true) : 0.0 for i in S] # uniform distribution supported on A_true
 
     density = Matrix{Float64}(undef, horizon, length(S)) # increasing time is down the matrix
-    muAB = Matrix{Float64}(undef, horizon, length(S))
+    density[1, :] = i0
+
     muABnorm = Matrix{Float64}(undef, horizon, length(S))
+    muABnorm[1, :] = i0
+    P_plus = [P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in S) for i in S, j in S]
+
+    # currents under construction
     fij = Array{Float64, 3}(undef, horizon, length(S), length(S))
     fplusij = Array{Float64, 3}(undef, horizon, length(S), length(S))
 
-    for n = 1:horizon
+    for n = 2:horizon
         # density
-        pn = transpose(P^(n - 1)) * i0 # transpose to get correct matrix multiplication
-        density[n, :] = pn 
-
-        # reactive density
-        muAB[n, :] = [qm[i]*pn[i]*qp[i] for i in S]
+        density[n, :] = transpose(P) * density[n - 1, :]  
 
         # normalized reactive density
-        muABnorm[n, :] = sum(muAB[n, :]) == 0.0 ? muAB[n, :] : muAB[n, :]/sum(muAB[n, :])
+        muABnorm[n, :] = transpose(P_plus) * muABnorm[n - 1, :] 
+
+        # currents under construction
 
         # reactive current
-        fij[n, :, :] = [qm[i]*pn[i]*P[i, j]*qp[j] for i in S, j in S]
+        # fij[n, :, :] = [qm[i]*pn[i]*P[i, j]*qp[j] for i in S, j in S]
+        fij[n, :, :] = zeros(length(S), length(S))
 
         # forward current
-        fplusij[n, :, :] = [max(fij[n, i, j] - fij[n, j, i], 0) for i in S, j in S]
+        # fplusij[n, :, :] = [max(fij[n, i, j] - fij[n, j, i], 0) for i in S, j in S]
+        fplusij[n, :, :] = zeros(length(S), length(S))
     end
 
     res = TPTHomogNonStatResult(
@@ -108,7 +113,6 @@ function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 10
         tpt_homog.q_plus,
         tpt_homog.q_minus,
         density,
-        muAB,
         muABnorm,
         fij,
         fplusij

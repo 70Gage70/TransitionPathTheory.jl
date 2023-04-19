@@ -46,7 +46,6 @@ struct TPTHomogNonStatResult{T<:Real, U<:Integer} <: AbstractTPTHomogResult
     q_minus::Vector{T}
     # TPT statistics are time-dependent now, so each has one extra dimension relative to the stationary case.
     density::Matrix{T}
-    reactive_density::Matrix{T}
     normalized_reactive_density::Matrix{T}
     reactive_current::Array{T, 3}
     forward_current::Array{T, 3}
