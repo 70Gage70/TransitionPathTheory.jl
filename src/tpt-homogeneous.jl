@@ -73,20 +73,20 @@ function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 10
     qp = tpt_homog.q_plus
     qm = tpt_homog.q_minus
     pi_stat = tpt_homog.pi_stat
-    A = tpt_homog.sets.A
+    A_true = tpt_homog.sets.A_true
     S = tpt_homog.sets.S
 
-    i0 = [i in A ? i/length(A) : 0.0 for i in S] # uniform distribution
+    i0 = [i in A_true ? 1.0/length(A_true) : 0.0 for i in S] # uniform distribution supported on A_true
 
     density = Matrix{Float64}(undef, horizon, length(S)) # increasing time is down the matrix
-    muAB = Matrix{Float64}(undef, horizon, length(S)) # increasing time is down the matrix
+    muAB = Matrix{Float64}(undef, horizon, length(S))
     muABnorm = Matrix{Float64}(undef, horizon, length(S))
     fij = Array{Float64, 3}(undef, horizon, length(S), length(S))
     fplusij = Array{Float64, 3}(undef, horizon, length(S), length(S))
 
     for n = 1:horizon
         # density
-        pn = P^(n - 1) * i0
+        pn = transpose(P^(n - 1)) * i0 # transpose to get correct matrix multiplication
         density[n, :] = pn 
 
         # reactive density

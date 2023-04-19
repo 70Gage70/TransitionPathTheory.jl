@@ -20,10 +20,14 @@ function remove_omega(tpt_result::AbstractTPTHomogResult)
             if typeof(gf) <: AbstractVector
                 push!(omega_tpt_result, gf[1:end-1])
             elseif typeof(gf) <: AbstractMatrix
-                if size(gf, 1) == size(gf, 2)
-                    push!(omega_tpt_result, gf[1:end-1, 1:end-1])
-                else
-                    push!(omega_tpt_result, gf[1:end-1, :])
+                if typeof(tpt_result) <: TPTHomogStatResult
+                    if size(gf, 1) == size(gf, 2) # currents
+                        push!(omega_tpt_result, gf[1:end-1, 1:end-1])
+                    else # advanced stats
+                        push!(omega_tpt_result, gf[1:end-1, :])
+                    end
+                elseif typeof(tpt_result) <: TPTHomogNonStatResult
+                    push!(omega_tpt_result, gf[:, 1:end-1]) # scalar stats (are matrices because time-dependent)
                 end
             elseif typeof(gf) <: AbstractArray
                 if size(gf, 2) == size(gf, 3)
