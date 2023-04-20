@@ -13,6 +13,7 @@ All advanced statistics can be calculated from this.
 struct TPTHomog{T<:Real, U<:Integer} 
     sets::TPTSets{U}
     P::Matrix{T}
+    P_plus::Matrix{T}
     pi_stat::Vector{T}
     q_plus::Vector{T}
     q_minus::Vector{T}
@@ -67,13 +68,24 @@ function TPTHomog(
     qp = q_plus(P, sets.A_true, sets.B_true, sets.C) 
     qm = q_minus(P_minus, sets.A_true, sets.B_true, sets.C)
 
-    # C_plus is the set of indices i outside of B such that there exists a j in S
-    # such that i can reach j in one step and j is reactive-connected to B
-    C_plus = [i for i in setdiff(sets.S, sets.B) if sum(P[i, j]*qp[j] for j in sets.S) > 0.0] 
-    @assert !isempty(C_plus) "C_plus can not be empty. This happens if there is no reactive path from A to B."
-    sets = TPTSets(sets.S, sets.A, sets.B, C_plus = C_plus)
+    # S_plus is the set of indices i outside of intersect(A, B) such that: 
+    # there exists a j in S such that: 
+    # i can reach j in one step and j is reactive-connected to B.
+    # Note that: A_true intersects with S_plus and B_true is a subset of S_plus.
+    S_plus = [i for i in setdiff(sets.S, intersect(sets.A, sets.B)) if sum(P[i, j]*qp[j] for j in sets.S) > 0.0] 
+    sets = TPTSets(sets.S, sets.A, sets.B, S_plus = S_plus)
 
-    return TPTHomog(sets, P, pi_stat, qp, qm)
+    # P_plus is the reactive alalogue of P.
+    P_plus = zeros(size(P))
+    for i in sets.S_plus
+        if i in sets.B_true
+            P_plus[i, sets.B_true] = P[i, sets.B_true]/sum(P[i, k] for k in sets.B_true)
+        else
+            P_plus[i, sets.S_plus] =[P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in sets.S) for j in sets.S_plus]
+        end
+    end
+
+    return TPTHomog(sets, P, P_plus, pi_stat, qp, qm)
 end
 
 function Base.show(io::IO, x::TPTHomog)

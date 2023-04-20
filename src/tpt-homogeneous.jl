@@ -1,8 +1,7 @@
 using HDF5
 
 include("statistics/homogeneous/remaining-time.jl")
-include("statistics/homogeneous/hitting-distribution.jl")
-include("statistics/homogeneous/time-cdf.jl")
+include("statistics/homogeneous/hitting-location-distribution.jl")
 
 """
     tpt_stationary_statistics(tpt_homog)
@@ -36,10 +35,7 @@ function tpt_stationary_statistics(tpt_homog::TPTHomog)
     tAB_rem = remaining_time(tpt_homog)
 
     # hitting distribution
-    rij, ri = hitting_distribution(tpt_homog)
-
-    # time cdf
-    tcdf, tcdf_AB = time_cdf(tpt_homog)
+    rij, ri = hitting_location_distribution(tpt_homog)
 
     res = TPTHomogStatResult(
         tpt_homog.sets,
@@ -54,9 +50,7 @@ function tpt_stationary_statistics(tpt_homog::TPTHomog)
         tAB,
         tAB_rem,
         rij,
-        ri,
-        tcdf,
-        tcdf_AB
+        ri
     )
 
     return res
@@ -64,30 +58,39 @@ end
 
 
 """
-    tpt_nonstationary_statistics(tpt_homog)
+    tpt_nonstationary_statistics(tpt_homog; horizon = 100)
 
 Compute the nonstationary TPT statistics in the homogenous case.
+
+### Optional Arguments
+- `"horizon"`: The time step at which to cut off the calculation. Default `100`.
 """
 function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 100)
     P = tpt_homog.P
-    qp = tpt_homog.q_plus
-    qm = tpt_homog.q_minus
+    P_plus = tpt_homog.P_plus
+    # qp = tpt_homog.q_plus
+    # qm = tpt_homog.q_minus
     pi_stat = tpt_homog.pi_stat
     A_true = tpt_homog.sets.A_true
+    B_true = tpt_homog.sets.B_true
     S = tpt_homog.sets.S
+    S_plus = tpt_homog.sets.S_plus
 
     i0 = [i in A_true ? 1.0/length(A_true) : 0.0 for i in S] # uniform distribution supported on A_true
 
-    density = Matrix{Float64}(undef, horizon, length(S)) # increasing time is down the matrix
+    density = zeros(horizon, length(S)) # increasing time is down the matrix
     density[1, :] = i0
 
-    muABnorm = Matrix{Float64}(undef, horizon, length(S))
+    muABnorm = zeros(horizon, length(S))
     muABnorm[1, :] = i0
-    P_plus = [P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in S) for i in S, j in S]
+
+    outside_B_true = setdiff(S_plus, B_true)
+    t_cdf = zeros(horizon, length(outside_B_true))
+    t_cdf[1, :] = [sum(P_plus[i, j] for j in B_true) for i in outside_B_true] 
 
     # currents under construction
-    fij = Array{Float64, 3}(undef, horizon, length(S), length(S))
-    fplusij = Array{Float64, 3}(undef, horizon, length(S), length(S))
+    fij = zeros(horizon, length(S), length(S))
+    fplusij = zeros(horizon, length(S), length(S))
 
     for n = 2:horizon
         # density
@@ -96,6 +99,9 @@ function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 10
         # normalized reactive density
         muABnorm[n, :] = transpose(P_plus) * muABnorm[n - 1, :] 
 
+        # hitting time distribution
+        t_cdf[n, :] = t_cdf[1, :] + P_plus[outside_B_true, outside_B_true] * t_cdf[n - 1, :]
+        
         # currents under construction
 
         # reactive current
@@ -107,13 +113,25 @@ function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 10
         fplusij[n, :, :] = zeros(length(S), length(S))
     end
 
+    # create full time cdf
+    # the cdf for hitting B_true at B_true should be ones
+    t_cdf_full = zeros(horizon, length(S))
+    t_cdf_full[:, B_true] .= 1.0
+    t_cdf_full[:, outside_B_true] .= t_cdf
+
+    # create time cdf for A to B
+    t_cdf_AB = [sum(i0[i]*t_cdf_full[n, i] for i in A_true) for n = 1:horizon]
+
     res = TPTHomogNonStatResult(
         tpt_homog.sets,
+        horizon,
         pi_stat,
         tpt_homog.q_plus,
         tpt_homog.q_minus,
         density,
         muABnorm,
+        t_cdf_full,
+        t_cdf_AB,
         fij,
         fplusij
     )

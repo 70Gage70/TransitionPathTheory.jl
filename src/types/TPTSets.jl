@@ -10,19 +10,19 @@ struct TPTSets{U<:Integer}
     C::Vector{U}
     A_true::Vector{U}
     B_true::Vector{U}
-    C_plus::Union{Vector{U}, Nothing}
+    S_plus::Union{Vector{U}, Nothing}
 end
 
 """
-    TPTSets(S, A, B; C_plus)
+    TPTSets(S, A, B; S_plus)
 
-Construct all the relevant TPT sets given `S`, `A`, `B and optionally `C_plus`.  
+Construct all the relevant TPT sets given `S`, `A`, `B and optionally `S_plus`.  
 """
 function TPTSets(
     S::Vector{U}, 
     A::Vector{U}, 
     B::Vector{U};
-    C_plus::Union{Vector{T}, Nothing} = nothing) where {T<:Real, U<:Integer}
+    S_plus::Union{Vector{T}, Nothing} = nothing) where {T<:Real, U<:Integer}
 
     # Scrub any accidental repeated indices
     S = unique(S)
@@ -48,7 +48,16 @@ function TPTSets(
     A_true = setdiff(A, intersect(A, B))
     B_true = setdiff(B, intersect(A, B))
 
-    return TPTSets(S, A, B, C, A_true, B_true, C_plus)
+    if S_plus !== nothing
+        @assert !isempty(intersect(A_true, S_plus)) "There are no states in A_true that can reach reactively."
+        @assert issubset(B_true, S_plus) "B_true must be a subset of S_plus."
+
+        if !issubset(A_true, S_plus)
+            @info "A_true has interior states. These are ignored by TPT."
+        end
+    end
+
+    return TPTSets(S, A, B, C, A_true, B_true, S_plus)
 end
 
 function Base.show(io::IO, x::TPTSets)
