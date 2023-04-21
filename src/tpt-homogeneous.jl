@@ -63,7 +63,7 @@ end
 Compute the nonstationary TPT statistics in the homogenous case.
 
 ### Optional Arguments
-- `"horizon"`: The time step at which to cut off the calculation. Default `100`.
+- `"horizon"`: The time step at which to cut off the calculation. Default `100`. Note that the `horizon` value does NOT enforce that trajectories leaving A hit B by that time.
 """
 function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 100)
     P = tpt_homog.P

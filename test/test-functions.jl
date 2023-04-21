@@ -1,5 +1,5 @@
 function test_eq(a::Any, b::Any)
-    if (length(a) == 0) && (length(b) == 0)
+    if (length(a) == 0) && (length(b) == 0) && a == b
         return true
     elseif length(a) != length(b)
         return false
