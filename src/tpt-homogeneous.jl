@@ -89,8 +89,8 @@ function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 10
     t_cdf[1, :] = [sum(P_plus[i, j] for j in B_true) for i in outside_B_true] 
 
     # currents under construction
-    fij = zeros(horizon, length(S), length(S))
-    fplusij = zeros(horizon, length(S), length(S))
+    fij = zeros(1, 1, 1)
+    fplusij = zeros(1, 1, 1)
 
     for n = 2:horizon
         # density
@@ -106,11 +106,11 @@ function tpt_nonstationary_statistics(tpt_homog::TPTHomog; horizon::Integer = 10
 
         # reactive current
         # fij[n, :, :] = [qm[i]*pn[i]*P[i, j]*qp[j] for i in S, j in S]
-        fij[n, :, :] = zeros(length(S), length(S))
+        # fij[n, :, :] = zeros(length(S), length(S))
 
         # forward current
         # fplusij[n, :, :] = [max(fij[n, i, j] - fij[n, j, i], 0) for i in S, j in S]
-        fplusij[n, :, :] = zeros(length(S), length(S))
+        # fplusij[n, :, :] = zeros(length(S), length(S))
     end
 
     # create full time cdf
@@ -141,17 +141,36 @@ end
 
 
 """
-    tpt_write(outfile, tpt_result)
+    tpt_write(outfile, tpt_result; dir_name, overwrite, P_out)
 
-Write the set indices and statistics from `tpt_result` to the file `outfile`, which must be in the `.h5` format.
+Write `tpt_result` to the file `outfile`, which must be in the `.h5` format.
 
-The indices are found in `tpt_homog/indices` and the results are in `tpt_homog/statistics`.
+If `outfile` does not exist, it will be created. Results are written to the directory specified by `dir_name`.
+
+Indices are written to the sub-directory `"indices"` and statistics to the sub-directory `"statistics"`.
+
+### Optional Arguments
+- `dir_name`: The name of the directory that `tpt_result` is written to, default `"tpt_homog"`. Directories can be nested, e.g. `"trial1/tpt"`.
+- `overwrite`: If `true`, the directory `dir_name` will overwrite a directory with the same name if it exists in `outfile`. Default `false`.
 """
-function tpt_write(outfile::String, tpt_result::AbstractTPTHomogResult)
-    @assert outfile[end-2:end] == ".h5" "The output file must be of the form filename.h5"
-    fout = h5open(outfile, "w")
+function tpt_write(
+    outfile::String, 
+    tpt_result::AbstractTPTHomogResult;
+    dir_name::String = "tpt_homog", 
+    overwrite::Bool = false)
 
-    tpt = create_group(fout, "tpt_homog")
+    @assert outfile[end-2:end] == ".h5" "The output file must be of the form filename.h5"
+    fout = h5open(outfile, "cw")
+
+    if dir_name in keys(fout)
+        if !overwrite
+            @assert !(dir_name in keys(fout)) "This file already has a group with the name: $(dir_name). Pass `overwrite = true` to force a replacement."
+        end
+
+        delete_object(fout, dir_name)
+    end
+
+    tpt = create_group(fout, dir_name)
     inds = create_group(tpt, "indices")
     stats = create_group(tpt, "statistics")
 

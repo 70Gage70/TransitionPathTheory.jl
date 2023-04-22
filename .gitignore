@@ -72,8 +72,7 @@ Temporary Items
 **/src/*.h5
 
 # workspace
-/src/workspaces.jl
-/src/workspaces2.jl
+/src/workspaces*.jl
 /src/types_loader.jl
 
 # Test
