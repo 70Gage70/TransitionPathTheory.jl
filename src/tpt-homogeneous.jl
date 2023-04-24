@@ -150,7 +150,7 @@ If `outfile` does not exist, it will be created. Results are written to the dire
 Indices are written to the sub-directory `"indices"` and statistics to the sub-directory `"statistics"`.
 
 ### Optional Arguments
-- `dir_name`: The name of the directory that `tpt_result` is written to, default `"tpt_homog"`. Directories can be nested, e.g. `"trial1/tpt"`.
+- `dir_name`: The name of the directory that `tpt_result` is written to, default `"tpt_homog"`. Directories can be nested, e.g. `dir_name = "trial1/tpt"`.
 - `overwrite`: If `true`, the directory `dir_name` will overwrite a directory with the same name if it exists in `outfile`. Default `false`.
 """
 function tpt_write(
