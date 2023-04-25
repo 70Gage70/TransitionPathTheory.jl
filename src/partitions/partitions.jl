@@ -9,11 +9,12 @@ struct PartitionsResult{U<:Integer}
 end
 
 
-
 """
-    partition_spectral(tpt_homog::TPTHomog)
+    partition_spectral(tpt_homog)
 
 Partition the space minimally based on Gary Froyland's spectral method applied to the matrix `P`.
+
+This algorithm uses K-means rather than fuzzy C-means.
 """
 function partition_spectral(tpt_homog::TPTHomog)
     # the matrix and reversed matrix
@@ -31,106 +32,49 @@ function partition_spectral(tpt_homog::TPTHomog)
     return parts
 end
 
-function partition_statistic(stat::Vector{<:Real})
-    return kmeans
-end
-
 
 """
-Based on Gary Froyland's spectral method (not identical) with TPT probabilities.
+    partition_hitting_location(tpt_res)
 
-fij: matrix = fij normalized, pi = muAB normalized
-frevf: matrix = (fij normalized + fij- normalized)/2, pi = muAB normalized
+Partition the space minimally based on the B-hitting location of the states.
+
+States are in the same partition if they tend to hit B with similar distributions.
 """
+function partition_hitting_location(tpt_res::TPTHomogStatResult)
+    # recall that rij[i, j] is the probability that state i hits B at state j
+    # Of course, rij[i, X] = 0 for X not in B
+    rij = tpt_res.statistics.hitting_location_distribution
 
-function min_part_gary_f(tpt; type = "frevf")
-    fij = tpt["fij"] # note that these already exclude nirvana
-    muAB = tpt["muABnorm"]
+    # the distance matrix between states, where "distance" is the L2 norm between their distributions
+    # we exclude union(A, B)
+    outside_AB = setdiff(tpt_res.sets.S, union(tpt_res.sets.A, tpt_res.sets.B))
+    dist = [norm(rij[i,:] - rij[j, :]) for i in outside_AB, j in outside_AB]
 
-    all_inds = 1:length(muAB)
-    good_inds = findall(x -> x != 0.0, muAB) # have to avoid A and B since there's no density there
+    # construct partitions using kmedoids, since kmeans requires actual coordinates, not just distances
+    km = kmedoids(dist, 2).assignments
 
-    fij = fij[good_inds, good_inds]
-    for i = 1:size(fij, 1)
-        fij[i,:] = fij[i,:]/sum(fij[i,:])
-    end
-
-    muAB = muAB[good_inds]
-
-    fij_rev = Pminus(fij, muAB)
-
-
-    if type == "frevf"
-        R = (fij + fij_rev)/2
-    elseif type == "fij"
-        R = fij
-    end
-
-    L = 2 # number of partitions
-    Reigvecs = real(eigvecs(R)[:, end - L:end - 1]')
-    
-    # feature extraction with k means
-    km = kmeans(Reigvecs, L)
-    parts = zeros(Int64, length(all_inds))
-    parts[good_inds] = km.assignments
- 
-    return parts
-end
-
-
-"""
-Partition based on the distribution of B-hitting locations. That is, states are in the same partition
-if they hit B with roughly the same distribution.
-"""
-
-function min_part_B(tpt)
-    rij = tpt["rij"]
-    dist = zeros(size(rij)) # distance matrix between states
-    for i = 1:size(rij, 1)
-        for j = 1:size(rij, 1)
-            dist[i, j] = norm(rij[i,:] - rij[j, :])
-        end
-    end
-
-    muAB = tpt["muABnorm"]
-    good_inds = findall(x -> x != 0.0, muAB)
-    dist = dist[good_inds, good_inds] # don't want to include A, B in clustering
-    km = kmedoids(dist, 2) # have to use medioids since kmeans doesn't work without actual coordinates
-
-
-    parts = zeros(Int64, length(muAB))
-    parts[good_inds] = km.assignments
+    # add 0's in A/B locations
+    parts = zeros(Int64, length(tpt_res.sets.S))
+    parts[outside_AB] = km
 
     return parts
 end
 
 
 """
-Standardize the partitions such that the partition that contains (most of) A is Partition 1
+    standardize_minimal_partition(tpt_homog, partition)
+
+Standardize `partition` such that the partition that contains (most of) `tpt_homog.sets.A_true` is Partition 1.
 """
+function standardize_minimal_partition(tpt_homog::TPTHomog, partition::Vector{<:Integer})
+    # the partition that contains the most of A
+    part_A = mode(partition[tpt_homog.sets.A_true])
 
-function standardize_parts(P_Acon, parts)
-    connected_to_A = Int64[]
-
-    for i = 1:size(P_Acon, 1)
-        connected_to_A = union(connected_to_A, findall(x -> x != 0.0, P_Acon[i,:])) # indices of states A hits
+    if part_A == 2
+        partition = [part == 0 ? 0 : 3 - part for part in partition] # switches 1 to 2 and 2 to 1 while leaving 0 as 0
     end
 
-    indcon = mode(parts[connected_to_A]) # most common part of states that A hits
-
-    parts_new = parts
-
-    if indcon == 2
-        for i = 1:length(parts)
-            if parts[i] == 1
-                parts_new[i] = 2
-            elseif parts[i] == 2
-                parts_new[i] = 1
-            end
-        end
-    end
-
-    return parts_new
+    return partition
 end
 
 
@@ -139,10 +83,8 @@ end
 """
 function minimal_partitions(tpt_homog::TPTHomog)
     # the standard spectral partitions
-    spectral_P = partition_spectral(tpt_homog.P, tpt_homog.pi_stat)
+    spectral_P = partition_spectral(tpt_homog)
 
-    # the spectral partitions based on forward currents
-    abs.(LinearAlgebra.normalize(LinearAlgebra.eigvecs(transpose(P))[:,size(P)[1]], 1))
 
     gary_PrevP = min_part_gary_P(ulam, type = "PrevP")
     gary_frevf = min_part_gary_f(tpt, type = "frevf")
