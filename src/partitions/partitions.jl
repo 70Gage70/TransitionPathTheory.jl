@@ -1,12 +1,7 @@
-using Clustering:kmeans
+using Clustering:kmeans, kmedoids
 using HDF5
 using StatsBase:countmap, mode
 using LinearAlgebra
-
-struct PartitionsResult{U<:Integer}
-    spectral_P::Vector{U}
-    hitting_location::Vector{U}
-end
 
 
 """
@@ -34,6 +29,29 @@ end
 
 
 """
+    partition_current(tpt_res)
+
+Partition the space minimally based on [`partition_spectral`](@ref) applied to `tpt_res.reactive_current`.
+"""
+function partition_current(tpt_res::TPTHomogStatResult)
+    # the spectral partition using currents
+    # we use the subset fij[C, C] since the currents aren't defined at A and B and then stochasticize
+    C = tpt_res.sets.C
+    fij = tpt_res.reactive_current[C, C]
+    fij = fij ./ sum(fij,  dims = 2)
+
+    tpt_homog = TPTHomog(fij, [1], [2]) # A and B are arbitrary
+    parts_spectral = partition_spectral(tpt_homog)
+
+    # add zeros to A/B indices
+    parts = zeros(Int64, length(tpt_res.sets.S))
+    parts[C] = parts_spectral
+
+    return parts
+end
+
+
+"""
     partition_hitting_location(tpt_res)
 
 Partition the space minimally based on the B-hitting location of the states.
@@ -43,7 +61,7 @@ States are in the same partition if they tend to hit B with similar distribution
 function partition_hitting_location(tpt_res::TPTHomogStatResult)
     # recall that rij[i, j] is the probability that state i hits B at state j
     # Of course, rij[i, X] = 0 for X not in B
-    rij = tpt_res.statistics.hitting_location_distribution
+    rij = tpt_res.hitting_location_distribution
 
     # the distance matrix between states, where "distance" is the L2 norm between their distributions
     # we exclude union(A, B)
@@ -62,56 +80,15 @@ end
 
 
 """
-    standardize_minimal_partition(tpt_homog, partition)
+    minimal_partitions(tpt_homog, tpt_res)
 
-Standardize `partition` such that the partition that contains (most of) `tpt_homog.sets.A_true` is Partition 1.
+Construct all the TPT minimal partitions and return a [`PartitionsStatResult`](@ref).
 """
-function standardize_minimal_partition(tpt_homog::TPTHomog, partition::Vector{<:Integer})
-    # the partition that contains the most of A
-    part_A = mode(partition[tpt_homog.sets.A_true])
-
-    if part_A == 2
-        partition = [part == 0 ? 0 : 3 - part for part in partition] # switches 1 to 2 and 2 to 1 while leaving 0 as 0
-    end
-
-    return partition
-end
-
-
-"""
-    minimal_partitions(s)
-"""
-function minimal_partitions(tpt_homog::TPTHomog)
-    # the standard spectral partitions
+function minimal_partitions(tpt_homog::TPTHomog, tpt_res::TPTHomogStatResult)
     spectral_P = partition_spectral(tpt_homog)
-
-
-    gary_PrevP = min_part_gary_P(ulam, type = "PrevP")
-    gary_frevf = min_part_gary_f(tpt, type = "frevf")
-    B_hit = min_part_B(tpt)
-
-    # Now we standardize the partitions such that the partition that contains A is Partition 1
-    # This convention is also applied to Gary partition even though it's independent of A
-
-    P_Acon =  ulam["P_open"][tpt["Ainds"], :] # chunk of P that gives P(A -> elsewhere)
-    gary_PrevP = standardize_parts(P_Acon, gary_PrevP)
-    gary_frevf = standardize_parts(P_Acon, gary_frevf)
-    B_hit = standardize_parts(P_Acon, B_hit)
-
-    return_dict = Dict(
-        "gary_PrevP" => gary_PrevP,
-        "gary_frevf" => gary_frevf,
-        "B_hit" => B_hit
-        )
-
-    if h5out
-        fname = "partitions" * extra_suffix * ".h5"
-        rm(fname, force = true)
-        fout = h5open(fname, "w")
-        write_dict_to_h5(fout, "partitions", return_dict)
-        close(fout)
-    end
+    spectral_f = partition_current(tpt_res)
+    hitting_location = partition_hitting_location(tpt_res)
     
-    return return_dict
+    return PartitionsStatResult(tpt_homog, spectral_P, spectral_f, hitting_location)
 end
 

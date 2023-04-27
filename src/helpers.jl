@@ -1,13 +1,11 @@
 """
-    P_stoc(outfile, tpt_homog, tpt_res)
+    P_stoc(n)
 
-Generate a stochastic matrix with random entries. Used for debugging and testing.
+Generate a stochastic matrix of size `n` by `n` with random entries. Used for debugging and testing.
 """
 function P_stoc(n)
     P = rand(n, n)
-    for i = 1:n
-        P[i,:] = P[i, :]/sum(P[i, :])
-    end
+    P = P ./ sum(P, dims = 2)
 
     return P
 end

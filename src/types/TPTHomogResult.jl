@@ -1,7 +1,7 @@
 """
     AbstractTPTHomogResult
 
-An abstract results object for homogeneous TPT.
+An abstract statistics result object for homogeneous TPT.
 """
 abstract type AbstractTPTHomogResult end
 
