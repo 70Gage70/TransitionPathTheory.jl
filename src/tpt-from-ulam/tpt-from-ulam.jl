@@ -1,19 +1,17 @@
-# using UlamMethod
-
-
 using UlamMethod
 
 """
-    remove_omega(tpt_result)
+    remove_omega(result::Union{AbstractTPTHomogResult, AbstractPartitionsResult})
 
-Remove the last state from indices and statistics of `tpt_result`. Used for applications to Ulam's method.
+Remove the last state from indices, statistics and/or partitions of `result`. Used for applications to Ulam's method.
 
-Note that this does not change the  actual results of the TPT calculation, it is only for convenient reference
-to  TPT statistics without the omega state.
+Note that this does not change the  actual results of any calculations, it is only for convenient reference
+to TPT statistics without the omega state.
 """
-function remove_omega(tpt_result::AbstractTPTHomogResult)
-    return remove_omega(tpt_result)
+function remove_omega(result::Union{AbstractTPTHomogResult, AbstractPartitionsResult})
+    return remove_omega(result)
 end
+
 
 function remove_omega(tpt_result::TPTHomogStatResult)
     omega_tpt_result = []
@@ -42,6 +40,7 @@ function remove_omega(tpt_result::TPTHomogStatResult)
 
     return omega_tpt_result
 end
+
 
 function remove_omega(tpt_result::TPTHomogNonStatResult)
     omega_tpt_result = []
@@ -75,6 +74,21 @@ function remove_omega(tpt_result::TPTHomogNonStatResult)
     return omega_tpt_result
 end
 
+
+function remove_omega(parts_result::AbstractPartitionsResult)
+    omega_parts_result = []
+
+    for fn in fieldnames(typeof(parts_result))
+        gf = getfield(parts_result, fn)
+        push!(omega_parts_result, gf[1:end-1])
+    end
+    
+    omega_parts_result = typeof(parts_result)(omega_parts_result...)
+
+    return omega_parts_result
+end
+
+
 """
     ulam_polys_to_indices(ulam::UlamResult, region_points::Matrix)
 
@@ -82,7 +96,14 @@ Return a list of polygon indices i such that the i'th polygon contains at least 
 """
 function ulam_polys_to_indices(ulam::UlamResult, region_points::Matrix{<:Real})
     polys = ulam.polys
-    return unique(inpoly(region_points, PolyTable(polys)).inds)
+    inds = unique(inpoly(region_points, PolyTable(polys)).inds)
+    filter!(x->x!=0, inds)
+
+    if length(inds) == 0 
+        @warn "None of the provided points is in any Ulam polygon." 
+    end
+
+    return inds
 end
 
 """
@@ -92,7 +113,14 @@ Return a list of polygon indices i such that the i'th polygon has a non-empty in
 """
 function ulam_polys_to_indices(ulam::UlamResult, region_polygon::UlamPolygon)
     polys = ulam.polys
-    return [i for i in 1:length(polys) if ulam_intersects(region_polygon, polys[i])]
+    inds = [i for i in 1:length(polys) if ulam_intersects(region_polygon, polys[i])]
+    filter!(x->x!=0, inds)
+
+    if length(inds) == 0 
+        @warn "The provided polygon does not intersect with any Ulam polygon." 
+    end
+
+    return inds
 end
 
 # """

@@ -45,8 +45,9 @@ tpt_nonstat.q_plus # the forward committor is the same for homogeneous problems
 tpt_nonstat.normalized_reactive_density # normalized muAB; columns refer to increasing time
 
 # write the results to an .h5 file
-tpt_write("tpt_stat.h5", tpt_stat)
-tpt_write("tpt_nonstat.h5", tpt_nonstat)
+f_name = "tpt_results.h5"
+tpt_write(f_name, tpt_stat, dir_name = "tpt_stat")
+tpt_write(f_name, tpt_nonstat, dir_name = "tpt_nonstat")
 ```
 
 

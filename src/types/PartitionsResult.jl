@@ -19,7 +19,7 @@ end
 
 
 """
-    PartitionsStatResult(tpt_homog, spectral_P, spectral_f,  hitting_location)
+    PartitionsStatResult(tpt_homog, partitions...)
 
 Construct a [`PartitionsStatResult`](@ref) standardized according to [`standardize_partitions`](@ref).
 """
@@ -49,6 +49,27 @@ struct PartitionsNonStatResult{U<:Integer} <: AbstractPartitionsResult
     spectral_P_plus::Vector{U}
 end
 
+
+"""
+    PartitionsNonStatResult(tpt_homog, partitions...)
+
+Construct a [`PartitionsNonStatResult`](@ref) standardized according to [`standardize_partitions`](@ref).
+"""
+function PartitionsNonStatResult(
+    tpt_homog::TPTHomog,
+    partitions::Vector{U}...) where {U <: Integer}
+
+    # ensure all partitions are of the same length
+    if length(partitions) > 1 
+        for i = 1:length(partitions)-1
+            l1, l2 = length(partitions[i]), length(partitions[i+1])
+            @assert l1 == l2 "Partitions must be the same length (got $(l1) and $(l2))."
+        end
+    end
+
+    std_parts = standardize_partitions(tpt_homog, partitions...)
+    return PartitionsNonStatResult(std_parts...)
+end
 
 """
     standardize_partitions(tpt_homog, partitions...)
@@ -85,5 +106,12 @@ end
 function Base.show(io::IO, x::PartitionsStatResult)
     print(io, "PartitionsStatResult[")
     show(io, length(x.spectral_P))
+    print(" states]")
+end
+
+
+function Base.show(io::IO, x::PartitionsNonStatResult)
+    print(io, "PartitionsNonStatResult[")
+    show(io, length(x.spectral_P_plus))
     print(" states]")
 end

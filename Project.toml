@@ -1,7 +1,7 @@
 name = "TransitionPathTheory"
 uuid = "8e25bcd3-68d4-49ab-a21a-eececf317700"
 authors = ["Gage Bonner <gage.bonner@gmail.com>"]
-version = "0.3.2"
+version = "0.3.3"
 
 [deps]
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
@@ -13,7 +13,7 @@ UlamMethod = "4cc20838-1966-48f0-823a-5def0ad5c24d"
 Graphs = "1.8"
 HDF5 = "0.16.14"
 julia = "1.8"
-UlamMethod = "0.5.6"
+UlamMethod = "0.5.7"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

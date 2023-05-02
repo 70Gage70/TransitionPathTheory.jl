@@ -40,8 +40,8 @@ function partition_current(tpt_res::TPTHomogStatResult)
     fij = tpt_res.reactive_current[C, C]
     fij = fij ./ sum(fij,  dims = 2)
 
-    tpt_homog = TPTHomog(fij, [1], [2]) # A and B are arbitrary
-    parts_spectral = partition_spectral(tpt_homog)
+    tpt_homog_C = TPTHomog(fij, [1], [2]) # A and B are arbitrary
+    parts_spectral = partition_spectral(tpt_homog_C)
 
     # add zeros to A/B indices
     parts = zeros(Int64, length(tpt_res.sets.S))
@@ -80,7 +80,29 @@ end
 
 
 """
-    minimal_partitions(tpt_homog, tpt_res)
+    partition_P_plus(tpt_res)
+
+    Partition the space minimally based on [`partition_spectral`](@ref) applied to `tpt_res.reactive_current`.
+"""
+function partition_P_plus(tpt_homog::TPTHomog)
+    # we apply the spectral method with P_plus restricted to C and normalized accordingly
+    C = tpt_homog.sets.C
+    P_plus = tpt_homog.P_plus[C, C]
+    P_plus = P_plus ./ sum(P_plus, dims = 2)
+
+    tpt_homog_C = TPTHomog(P_plus, [1], [2]) # A and B are arbitrary
+    parts_spectral = partition_spectral(tpt_homog_C)
+
+    # add zeros to A/B indices
+    parts = zeros(Int64, length(tpt_homog.sets.S))
+    parts[C] = parts_spectral
+
+    return parts
+end
+
+
+"""
+    minimal_partitions(tpt_homog, tpt_res::TPTHomogStatResult)
 
 Construct all the TPT minimal partitions and return a [`PartitionsStatResult`](@ref).
 """
@@ -92,3 +114,14 @@ function minimal_partitions(tpt_homog::TPTHomog, tpt_res::TPTHomogStatResult)
     return PartitionsStatResult(tpt_homog, spectral_P, spectral_f, hitting_location)
 end
 
+
+"""
+    minimal_partitions(tpt_homog, tpt_res::TPTHomogNonStatResult)
+
+Construct all the TPT minimal partitions and return a [`PartitionsNonStatResult`](@ref).
+"""
+function minimal_partitions(tpt_homog::TPTHomog, tpt_res::TPTHomogNonStatResult)
+    P_plus = partition_P_plus(tpt_homog)
+    
+    return PartitionsNonStatResult(tpt_homog, P_plus)
+end
