@@ -68,11 +68,11 @@ function TPTHomog(
     qp = q_plus(P, sets.A_true, sets.B_true, sets.C) 
     qm = q_minus(P_minus, sets.A_true, sets.B_true, sets.C)
 
-    # S_plus is the set of indices i outside of intersect(A, B) such that: 
-    # there exists a j in S such that: 
-    # i can reach j in one step and j is reactive-connected to B.
-    # Note that: A_true intersects with S_plus and B_true is a subset of S_plus.
-    S_plus = [i for i in setdiff(sets.S, intersect(sets.A, sets.B)) if sum(P[i, j]*qp[j] for j in sets.S) > 0.0] 
+    # S_plus is the set of indices i such that
+    # if i is in B_true, then i is in S_plus
+    # if i is outside B_true, then i is in S_plus if both q_minus[i] > 0.0 and sum(P[i, j]*qp[j] for j in sets.S) > 0.0
+    # intuitively: i is either in B_true, or could have come from A_true and is connected to a state that is reactive_connected to B
+    S_plus = [i for i in sets.S if (i in sets.B_true) || (qm[i] > 0.0 && sum(P[i, j]*qp[j] for j in sets.S) > 0.0)]
     sets = TPTSets(sets.S, sets.A, sets.B, S_plus = S_plus)
 
     # P_plus is the reactive alalogue of P.

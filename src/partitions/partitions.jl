@@ -35,17 +35,26 @@ Partition the space minimally based on [`partition_spectral`](@ref) applied to `
 """
 function partition_current(tpt_res::TPTHomogStatResult)
     # the spectral partition using currents
-    # we use the subset fij[C, C] since the currents aren't defined at A and B and then stochasticize
-    C = tpt_res.sets.C
-    fij = tpt_res.reactive_current[C, C]
+    # C_part avoids non-reactive states
+    AB = union(tpt_res.sets.A_true, tpt_res.sets.B_true)
+    C_part = setdiff(tpt_res.sets.S_plus, AB)
+
+    @show C_part
+
+    fij = tpt_res.reactive_current[C_part, C_part]
+
+    @show fij
+
     fij = fij ./ sum(fij,  dims = 2)
+
+    
 
     tpt_homog_C = TPTHomog(fij, [1], [2]) # A and B are arbitrary
     parts_spectral = partition_spectral(tpt_homog_C)
 
     # add zeros to A/B indices
     parts = zeros(Int64, length(tpt_res.sets.S))
-    parts[C] = parts_spectral
+    parts[C_part] = parts_spectral
 
     return parts
 end
@@ -64,16 +73,17 @@ function partition_hitting_location(tpt_res::TPTHomogStatResult)
     rij = tpt_res.hitting_location_distribution
 
     # the distance matrix between states, where "distance" is the L2 norm between their distributions
-    # we exclude union(A, B)
-    outside_AB = setdiff(tpt_res.sets.S, union(tpt_res.sets.A, tpt_res.sets.B))
-    dist = [norm(rij[i,:] - rij[j, :]) for i in outside_AB, j in outside_AB]
+    # C_part avoids non-reactive states
+    AB = union(tpt_res.sets.A_true, tpt_res.sets.B_true)
+    C_part = setdiff(tpt_res.sets.S_plus, AB)
+    dist = [norm(rij[i,:] - rij[j, :]) for i in C_part, j in C_part]
 
     # construct partitions using kmedoids, since kmeans requires actual coordinates, not just distances
     km = kmedoids(dist, 2).assignments
 
     # add 0's in A/B locations
     parts = zeros(Int64, length(tpt_res.sets.S))
-    parts[outside_AB] = km
+    parts[C_part] = km
 
     return parts
 end
@@ -86,8 +96,10 @@ end
 """
 function partition_P_plus(tpt_homog::TPTHomog)
     # we apply the spectral method with P_plus restricted to C and normalized accordingly
-    C = tpt_homog.sets.C
-    P_plus = tpt_homog.P_plus[C, C]
+    # C_part avoids non-reactive states
+    AB = union(tpt_homog.sets.A_true, tpt_homog.sets.B_true)
+    C_part = setdiff(tpt_homog.sets.S_plus, AB)
+    P_plus = tpt_homog.P_plus[C_part, C_part]
     P_plus = P_plus ./ sum(P_plus, dims = 2)
 
     tpt_homog_C = TPTHomog(P_plus, [1], [2]) # A and B are arbitrary
@@ -95,7 +107,7 @@ function partition_P_plus(tpt_homog::TPTHomog)
 
     # add zeros to A/B indices
     parts = zeros(Int64, length(tpt_homog.sets.S))
-    parts[C] = parts_spectral
+    parts[C_part] = parts_spectral
 
     return parts
 end
