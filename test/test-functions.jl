@@ -18,6 +18,8 @@ function tpt_test(ftest::String, tpt_result::AbstractTPTHomogResult)
                 test = read(testf["tpt_homog/indices/$fns"])
         
                 if !test_eq(tpt, test)
+                    @show tpt
+                    @show test
                     @error("$fns mismatch") 
                     return false
                 end 
@@ -27,6 +29,8 @@ function tpt_test(ftest::String, tpt_result::AbstractTPTHomogResult)
             test = read(testf["tpt_homog/statistics/$fn"])
             
             if !test_eq(tpt, test) 
+                @show tpt
+                @show test
                 @error("$fn mismatch") 
                 return false
             end 
