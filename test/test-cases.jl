@@ -63,13 +63,17 @@ function generate_tests()
     test_cases_stationary, test_cases_nonstationary = test_cases()
 
     for t in test_cases_stationary
-        res, fout = tpt_stationary_statistics(t[1]), t[2]
-        tpt_write(fout, res)
+        tpt_stat, fout = tpt_stationary_statistics(t[1]), t[2]
+        parts = minimal_partitions(t[1], tpt_stat)
+        tpt_write(fout, tpt_stat)
+        tpt_write(fout, parts)
     end
 
     for t in test_cases_nonstationary
-        res, fout = tpt_nonstationary_statistics(t[1]), t[2]
-        tpt_write(fout, res)
+        tpt_nonstat, fout = tpt_nonstationary_statistics(t[1]), t[2]
+        parts = minimal_partitions(t[1], tpt_nonstat)
+        tpt_write(fout, tpt_nonstat)
+        tpt_write(fout, parts)
     end
 
     return
@@ -79,5 +83,6 @@ end
 # include("types.jl")
 # include("tpt-homogeneous.jl")
 # include("tpt-write.jl")
+# include("partitions/partitions.jl")
 # include("../test/test-cases.jl")
 # generate_tests()

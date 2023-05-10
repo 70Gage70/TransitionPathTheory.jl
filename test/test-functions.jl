@@ -41,3 +41,23 @@ function tpt_test(ftest::String, tpt_result::AbstractTPTHomogResult)
 
     return true
 end
+
+function parts_test(ftest::String, parts_result::AbstractPartitionsResult)
+    testf = h5open(ftest)
+
+    for fn in fieldnames(typeof(parts_result))
+        tpt = getfield(parts_result, fn)
+        test = read(testf["partitions/$fn"])
+        
+        if !test_eq(tpt, test) 
+            @show tpt
+            @show test
+            @error("$fn mismatch") 
+            return false
+        end 
+    end
+
+    close(testf)
+
+    return true
+end
