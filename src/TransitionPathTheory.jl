@@ -7,7 +7,7 @@ export
     AbstractTPTHomogResult, TPTHomogStatResult, TPTHomogNonStatResult, TPTHomog, TPTSets, show, # from types.jl
     AbstractPartitionsResult, PartitionsStatResult, PartitionsNonStatResult, standardize_partitions,  # from types.jl (partitions)
     partition_spectral, partition_current, partition_hitting_location, partition_P_plus, minimal_partitions, # from partitions.jl
-    remove_omega, ulam_polys_to_indices # from tpt-from-ulam.jl
+    remove_omega # from tpt-from-ulam.jl
 
 
 include("types.jl")
