@@ -1,5 +1,5 @@
 import LinearAlgebra
-import Graphs
+using Graphs:is_strongly_connected, SimpleDiGraph
 
 include("../statistics/homogeneous/committors.jl")
 
@@ -22,7 +22,7 @@ end
 """
     TPTHomog(P, A, B)
 
-Initialize a homogenous TPT calculation with the transition matrix `P` and state subsets `A` and `B`.
+Initialize a homogenous TPT calculation with the transition matrix `P`, source set `A` and target set `B`.
 
 Fundamental TPT statistics are computed automatically such as `q_plus` and `q_minus`.
 
@@ -43,18 +43,26 @@ function TPTHomog(
     A::Vector{U},
     B::Vector{U}) where {T<:Real, U<:Integer}
 
+    # ensure P has the correct size
     @assert size(P, 1) >= 2 "P is too small." 
     @assert size(P, 1) == size(P, 2) "P must be square."
-    @assert all(P .>= 0.0) "Entries of P can not be negative."
+
+    # ensure entries of P are positive numbers
+    bad_inds = findfirst(x->!(x>=0), P)
+    if bad_inds !== nothing
+        bad_entry = P[bad_inds]
+        bad_inds = bad_inds.I
+        error("Entries of P must be positive numbers. Found that P$(bad_inds) = $(bad_entry).")
+    end
 
     # ensure that P is stochastic
     for i = 1:size(P, 1)
-        @assert sum(P[i, :]) ≈ 1.0 "row $i of P is not stochastic to within float tolerance."
+        @assert sum(P[i, :]) ≈ 1.0 "Row $i of P is not stochastic to within float tolerance."
     end
 
     # ensure P represents an ergodic Markov chain
     Padj::Matrix{Int64} = [P[i,j] != 0.0 ? 1 : 0 for i in 1:size(P, 1), j in 1:size(P, 1)]
-    @assert Graphs.is_strongly_connected(Graphs.SimpleDiGraph(Padj)) "P must be strongly connected, i.e. there must be a path between every two states that P is the matrix of."
+    @assert is_strongly_connected(SimpleDiGraph(Padj)) "P must be strongly connected, i.e. there must be a path between every two states that P is the matrix of."
 
     # create sets
     if !isempty(intersect(A, B)) @info "A and B intersect; intersection states are avoided by TPT." end

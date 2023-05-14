@@ -1,8 +1,36 @@
 using Clustering:kmeans, kmedoids
+using Graphs:strongly_connected_components, SimpleDiGraph
 using HDF5
 using StatsBase:countmap, mode
 using LinearAlgebra
 using Random
+
+"""
+    partitionable_submatrix(P, tpt_sets)
+
+Return a tuple `(P_part, inds)` where 
+
+- `P_part` is a submatrix of `P` such that `P_part` is the transition \
+probability matrix of an ergodic Markov chain defined on the reactive subset of `tpt_sets`
+- `inds` is a list of integers such that `P[inds, inds] = P_part`
+"""
+function partitionable_submatrix(P::Matrix{<:Real}, tpt_sets::TPTSets)
+    # C_part avoids non-reactive states
+    AB = union(tpt_sets.A_true, tpt_sets.B_true)
+    C_part = setdiff(tpt_sets.S_plus, AB)
+    P_part = P[C_part, C_part]
+
+    # find the largest strongly connected component 
+    Padj::Matrix{Int64} = [P_part[i,j] != 0.0 ? 1 : 0 for i = 1:size(P_part,1), j = 1:size(P_part,1)]
+    scc = sort(sort(strongly_connected_components(SimpleDiGraph(Padj)), by = length)[end])
+    P_part = P_part[scc, scc]
+
+    # stochasticize
+    P_part = P_part ./ sum(P_part,  dims = 2)
+    inds = C_part[scc]
+
+    return (P_part, inds)
+end
 
 
 """
@@ -36,19 +64,13 @@ end
 Partition the space minimally based on [`partition_spectral`](@ref) applied to `tpt_res.reactive_current`.
 """
 function partition_current(tpt_res::TPTHomogStatResult; rseed = 123)
-    # the spectral partition using currents
-    # C_part avoids non-reactive states
-    AB = union(tpt_res.sets.A_true, tpt_res.sets.B_true)
-    C_part = setdiff(tpt_res.sets.S_plus, AB)
-    fij = tpt_res.reactive_current[C_part, C_part]
-    fij = fij ./ sum(fij,  dims = 2)
-
-    tpt_homog_C = TPTHomog(fij, [1], [2]) # A and B are arbitrary
-    parts_spectral = partition_spectral(tpt_homog_C, rseed = rseed)
+    fij, inds = partitionable_submatrix(tpt_res.reactive_current, tpt_res.sets)
+    tpth_parts = TPTHomog(fij, [1], [2]) # A and B are arbitrary
+    parts_spectral = partition_spectral(tpth_parts, rseed = rseed)
 
     # add zeros to A/B indices
     parts = zeros(Int64, length(tpt_res.sets.S))
-    parts[C_part] = parts_spectral
+    parts[inds] = parts_spectral
 
     return parts
 end
@@ -85,24 +107,18 @@ end
 
 
 """
-    partition_P_plus(tpt_res)
+    partition_P_plus(tpt_homog::TPTHomog; rseed = 123)
 
     Partition the space minimally based on [`partition_spectral`](@ref) applied to `tpt_res.reactive_current`.
 """
 function partition_P_plus(tpt_homog::TPTHomog; rseed = 123)
-    # we apply the spectral method with P_plus restricted to C and normalized accordingly
-    # C_part avoids non-reactive states
-    AB = union(tpt_homog.sets.A_true, tpt_homog.sets.B_true)
-    C_part = setdiff(tpt_homog.sets.S_plus, AB)
-    P_plus = tpt_homog.P_plus[C_part, C_part]
-    P_plus = P_plus ./ sum(P_plus, dims = 2)
-
-    tpt_homog_C = TPTHomog(P_plus, [1], [2]) # A and B are arbitrary
-    parts_spectral = partition_spectral(tpt_homog_C, rseed = rseed)
+    P_plus, inds = partitionable_submatrix(tpt_homog.P_plus, tpt_homog.sets)
+    tpth_parts = TPTHomog(P_plus, [1], [2]) # A and B are arbitrary
+    parts_spectral = partition_spectral(tpth_parts, rseed = rseed)
 
     # add zeros to A/B indices
     parts = zeros(Int64, length(tpt_homog.sets.S))
-    parts[C_part] = parts_spectral
+    parts[inds] = parts_spectral
 
     return parts
 end
