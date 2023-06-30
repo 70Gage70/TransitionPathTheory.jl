@@ -15,8 +15,6 @@ function remaining_time(tpt::TPTHomog)
     outside_B = setdiff(S_plus, B_true)
     M = I - P_plus[outside_B, outside_B]
     b = [1.0 for i in outside_B]
-    
-    @assert det(M) != 0.0 "I - M in the remaining time is not invertible, check that P is well defined."
     sol = M\b
 
     # assign the values to a vector; note that t_rem[B] = 0.0 is already handled

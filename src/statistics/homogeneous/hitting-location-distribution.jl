@@ -10,8 +10,6 @@ function hitting_location_distribution(tpt::TPTHomog)
     outside_B = setdiff(S_plus, B_true)
     M = I - P_plus[outside_B, outside_B]
 
-    @assert det(M) != 0.0 "I - M in the hitting distribution is not invertible, check that P is well defined."
-
     # the probability that state i hits B at index j
     rij = zeros(length(S), length(S))
     for Bind in B_true

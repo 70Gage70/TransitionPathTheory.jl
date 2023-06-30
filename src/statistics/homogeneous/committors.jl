@@ -19,8 +19,6 @@ function q_plus(
     # solve the linear algebra problem q = P q + b on the C subspace
     M = I - P[C, C] 
     b = [sum(P[i, k] for k in B) for i in C]
-    
-    @assert det(M) != 0.0 "I - P is not invertible, check that P is well defined."
     sol = M\b
     
     # assign the values to a vector; note that q[A] = 0.0 is already handled
@@ -54,8 +52,6 @@ function q_minus(
     # and switch the roles of A and B
     M = I - P_minus[C, C] 
     b = [sum(P_minus[i, k] for k in A) for i in C]
-    
-    @assert det(M) != 0.0 "I - P_minus is not invertible, check that P and P_minus are well defined."
     sol = M\b
     
     # assign the values to a vector; note that q[B] = 0.0 is already handled
