@@ -1,7 +1,7 @@
 name = "TransitionPathTheory"
 uuid = "8e25bcd3-68d4-49ab-a21a-eececf317700"
 authors = ["Gage Bonner <gage.bonner@gmail.com>"]
-version = "0.4.3"
+version = "0.4.4"
 
 [deps]
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
