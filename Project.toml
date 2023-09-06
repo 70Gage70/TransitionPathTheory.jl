@@ -4,18 +4,18 @@ authors = ["Gage Bonner <gage.bonner@gmail.com>"]
 version = "0.4.3"
 
 [deps]
-StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-StatsBase = "0.33, 0.34"
 Clustering = "0.15"
 Graphs = "1.8"
-HDF5 = "0.16.14"
+HDF5 = "0.16.14, 0.17"
+StatsBase = "0.33, 0.34"
 julia = "1.8"
 
 [extras]
