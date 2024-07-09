@@ -246,6 +246,29 @@ function remaining_time(tpt::HomogeneousTPTProblem)
     return t_rem       
 end
 
+function hitting_location_distribution(tpt::HomogeneousTPTProblem)
+    S, S_plus, B_true, P_plus = 𝒮(tpt), 𝒮_plus(tpt), ℬ_true(tpt), 𝒫_plus(tpt)
+
+    # solve the linear algebra problem r = P_plus r + b restricted to outside_B
+    outside_B = setdiff(S_plus, B_true)
+    M = I - P_plus[outside_B, outside_B]
+
+    # the probability that state i hits B at index j
+    rij = zeros(length(S), length(S))
+    for Bind in B_true
+        b = P_plus[outside_B, Bind]
+        rij[outside_B, Bind] = M\b
+    end
+
+    # starting at any given B_true index, guaranteed to hit that 
+    rij[B_true, B_true] = [i == j ? 1.0 : 0.0 for i = 1:length(B_true), j = 1:length(B_true)]
+    
+    # trim very small (possibly negative due to floats) values
+    rij[abs.(rij) .< 1e-16] .= 0.0
+
+    return rij
+end
+
 function stationary_statistics(tpt::HomogeneousTPTProblem)
     P = 𝒫(tpt)
     pi_stat, qp, qm = stationary_distribution(tpt), forward_committor(tpt), backward_committor(tpt)
@@ -269,6 +292,9 @@ function stationary_statistics(tpt::HomogeneousTPTProblem)
     # remaining time
     t_rem = remaining_time(tpt)
 
+    # hitting locations
+    rij = hitting_location_distribution(tpt)
+
     return (
         stationary_distribution = pi_stat, 
         forward_committor = qp, 
@@ -278,7 +304,8 @@ function stationary_statistics(tpt::HomogeneousTPTProblem)
         forward_current = fplusij, 
         reactive_rate = kAB, 
         reactive_time = tAB, 
-        remaining_time = t_rem)
+        remaining_time = t_rem,
+        hitting_location_distribution = rij)
 end
 
 ############################################################
