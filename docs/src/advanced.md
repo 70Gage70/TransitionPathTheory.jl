@@ -63,6 +63,7 @@ HomogeneousTPTProblem
 
 ```@docs; canonical=false
 stationary_statistics
+nonstationary_statistics
 ```
 
 ## Low level

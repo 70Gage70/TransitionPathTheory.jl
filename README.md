@@ -10,8 +10,9 @@ This is a package for computing transition path theory[^1] (TPT) statistics a Ma
 The main function of TPT is to compute statistics of "reactive" trajectories, namely trajectories which travel directly from the source to the target with no intermediate visit to either.
 
 ### Features
+- Automatic validation and fast computation with simple interface.
 - Supports discrete, homogeneous (time-independent) Markov chains.
-- Automatic validation and fast computation of main TPT statistics with simple interface.
+- Stationary and non-stationary TPT statistics.
 
 ## Documentation
 
@@ -42,11 +43,12 @@ A = [1, 2, 3]
 B = [3, 4, 5]                           
 ```              
 
-Then, we set up `HomogeneousTPTProblem` and use `stationary_statistics` to compute all the relevant statistics in a `NamedTuple.`
+Then, we set up `HomogeneousTPTProblem` and use `stationary_statistics` and `nonstationary_statistics` to compute all the relevant statistics in a `NamedTuple.`
 
 ```
 tpt = HomogeneousTPTProblem(P, A, B)
 stats = stationary_statistics(tpt)
+stats_ns = nonstationary_statistics(tpt, 100)  # 100 time step horizon
 ```
 
 ## Citation
