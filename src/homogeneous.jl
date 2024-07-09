@@ -348,49 +348,46 @@ Compute and return the following statistics in a `NamedTuple`:
 
 - `density`
 - `reactive_density`
-- `t_cdf_full`
+- `t_cdf`
 - `t_cdf_AB`
 """
 function nonstationary_statistics(tpt::HomogeneousTPTProblem, horizon::Integer)
     @argcheck horizon >= 1
 
-    P, P_plus, pi_stat = 𝒫(tpt), 𝒫_plus(tpt), stationary_distribution(tpt)
+    P, P_plus = 𝒫(tpt), 𝒫_plus(tpt)
     A_true, B_true, S, S_plus = 𝒜_true(tpt), ℬ_true(tpt), 𝒮(tpt), 𝒮_plus(tpt)
 
     i0 = [i in A_true ? 1.0/length(A_true) : 0.0 for i in S] # uniform distribution supported on A_true
 
-    density = zeros(horizon, length(S)) # increasing time is down the matrix
-    density[1, :] = i0
+    density = Vector{Float64}[]
+    push!(density, i0)
 
-    reactive_density = zeros(horizon, length(S))
-    reactive_density[1, :] = i0
+    reactive_density = Vector{Float64}[]
+    push!(reactive_density, i0)
 
     outside_B = setdiff(S_plus, B_true)
-    t_cdf = zeros(horizon, length(outside_B))
-    t_cdf[1, :] = [sum(P_plus[i, j] for j in B_true) for i in outside_B] 
+    t_cdf = Vector{Float64}[]
+    push!(t_cdf, [i in outside_B ? sum(P_plus[i, j] for j in B_true) : i in B_true ? 1.0 : 0.0 for i in S])
 
-    for n = 2:horizon
+    for _ = 2:horizon
         # density
-        density[n, :] = transpose(P) * density[n - 1, :]  
+        push!(density, transpose(P) * density[end])
 
         # normalized reactive density
-        reactive_density[n, :] = transpose(P_plus) * reactive_density[n - 1, :] 
+        push!(reactive_density, transpose(P_plus) * reactive_density[end])
 
         # hitting time distribution
-        t_cdf[n, :] = t_cdf[1, :] + P_plus[outside_B, outside_B] * t_cdf[n - 1, :]
+        t_cdf_next = [i in B_true ? 1.0 : 0.0 for i in S]
+        t_cdf_next[outside_B] .= t_cdf[1][outside_B] + P_plus[outside_B, outside_B] * t_cdf[end][outside_B]
+        push!(t_cdf, t_cdf_next)
     end
 
-    # create full time cdf
-    t_cdf_full = zeros(horizon, length(S))
-    t_cdf_full[:, B_true] .= 1.0 # cdf to B_true starting in B_true
-    t_cdf_full[:, outside_B] .= t_cdf
-
     # create time cdf for A to B
-    t_cdf_AB = [sum(i0[i]*t_cdf_full[n, i] for i in A_true) for n = 1:horizon]
+    t_cdf_AB = [sum(i0[i]*t_cdf[n][i] for i in A_true) for n = 1:horizon]
 
     return (
         density = density, 
         reactive_density = reactive_density, 
-        t_cdf_full = t_cdf_full, 
+        t_cdf = t_cdf, 
         t_cdf_AB = t_cdf_AB)
 end
