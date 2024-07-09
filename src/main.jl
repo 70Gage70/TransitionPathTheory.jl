@@ -246,7 +246,7 @@ function remaining_time(tpt::HomogeneousTPTProblem)
     return t_rem       
 end
 
-function reactive_statistics(tpt::HomogeneousTPTProblem)
+function stationary_statistics(tpt::HomogeneousTPTProblem)
     P = 𝒫(tpt)
     pi_stat, qp, qm = stationary_distribution(tpt), forward_committor(tpt), backward_committor(tpt)
     S = 𝒮(tpt)
@@ -269,7 +269,16 @@ function reactive_statistics(tpt::HomogeneousTPTProblem)
     # remaining time
     t_rem = remaining_time(tpt)
 
-    return (muAB, fij, fplusij, kAB, tAB, t_rem)
+    return (
+        stationary_distribution = pi_stat, 
+        forward_committor = qp, 
+        backward_committor = qm, 
+        reactive_density = muAB, 
+        reactive_current = fij, 
+        forward_current = fplusij, 
+        reactive_rate = kAB, 
+        reactive_time = tAB, 
+        remaining_time = t_rem)
 end
 
 ############################################################
@@ -279,7 +288,4 @@ B = [3, 4, 5]
 P = TransitionMatrix(10)
 
 tpt = HomogeneousTPTProblem(P, A, B)
-pi_stat = stationary_distribution(tpt)
-q_plus = forward_committor(tpt)
-q_minus = backward_committor(tpt)
-stats = reactive_statistics(tpt)
+stats = stationary_statistics(tpt)
