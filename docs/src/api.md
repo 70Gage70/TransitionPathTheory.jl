@@ -18,9 +18,3 @@ Order = [:function]
 Modules = [TransitionPathTheory]
 Order = [:type]
 ``` 
-
-<!-- ## Constants
-```@autodocs
-Modules = [TransitionPathTheory]
-Order = [:constant]
-```  -->
