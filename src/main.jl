@@ -102,8 +102,6 @@ function HomogeneousTPTProblem(
     target::Vector{<:Integer}; 
     avoid::Vector{<:Integer} = Int64[])
 
-    ### PARSE SOURCE/TARGET/AVOID
-
     # ensure no repeated indices
     @argcheck allunique(source)
     @argcheck allunique(target)
@@ -130,7 +128,6 @@ end
 ℬ_true(tpt::HomogeneousTPTProblem) = setdiff(ℬ(tpt), Ω(tpt))      
 𝒞(tpt::HomogeneousTPTProblem) = setdiff(𝒮(tpt), union(𝒜(tpt), ℬ(tpt)))
 
-
 function stationary_distribution(tpt::HomogeneousTPTProblem)
     P = 𝒫(tpt)
 
@@ -141,23 +138,138 @@ function stationary_distribution(tpt::HomogeneousTPTProblem)
     end
 end
 
+function 𝒫_backwards(tpt::HomogeneousTPTProblem)
+    P, S = 𝒫(tpt), 𝒮(tpt)
+    pi_stat = stationary_distribution(tpt)
+
+    return [(pi_stat[j]/pi_stat[i])*P[j,i] for i in S, j in S]
+end
+
 function forward_committor(tpt::HomogeneousTPTProblem)
-    P, B, C = 𝒫(tpt), ℬ(tpt), 𝒞(tpt)
+    P, A, B, C = 𝒫(tpt), 𝒜(tpt), ℬ(tpt), 𝒞(tpt)
 
     # solve the linear algebra problem q = P q + b on the C subspace
     M = I - P[C, C] 
     b = [sum(P[i, k] for k in B) for i in C]
     sol = M\b
     
-    # assign the values to a vector; note that q[A] = 0.0 is already handled
+    # assign the values to a vector
     q = zeros(size(P, 1))
     q[B] .= 1.0
+    q[A] .= 0.0 # handle A after B since intersection states need to be 0
     q[C] = sol
     
     # trim very small (possibly negative due to floats) values
     q[abs.(q) .< 1e-16] .= 0.0
  
     return q
+end
+
+function backward_committor(tpt::HomogeneousTPTProblem)
+    P_back, A, B, C = 𝒫_backwards(tpt), 𝒜(tpt), ℬ(tpt), 𝒞(tpt)
+
+    # The calculation is identical to q_plus, except we use P_back instead of P 
+    # and switch the roles of A and B
+    M = I - P_back[C, C] 
+    b = [sum(P_back[i, k] for k in A) for i in C]
+    sol = M\b
+    
+    # assign the values to a vector; note that q[B] = 0.0 is already handled
+    q = zeros(size(P_back, 1))
+    q[A] .= 1.0
+    q[B] .= 0.0 # handle B after A since intersection states need to be 0
+    q[C] = sol
+    
+    # trim very small (possibly negative due to floats) values
+    q[abs.(q) .< 1e-16] .= 0.0
+
+    return q      
+end
+
+"""
+    𝒮_plus(tpt)
+
+The set of indices `i` such that
+- if `i` is in `B_true`, then `i` is in `S_plus`
+- if `i` is outside `B_true`, then `i` is in `S_plus` if both 
+ - `q_minus[i] > 0.0 `
+ - `sum(P[i, j]*qp[j] for j in sets.S) > 0.0`
+
+Intuitively: `i` is either in `B_true`, or could have come from `A_true` and is connected to a state that is reactively connected to `B`.
+"""
+function 𝒮_plus(tpt::HomogeneousTPTProblem)
+    S, B_true = 𝒮(tpt), ℬ_true(tpt)
+    P = 𝒫(tpt)
+    qp, qm = forward_committor(tpt), backward_committor(tpt)
+
+    return [i for i in S if (i in B_true) || (qm[i] > 0.0 && sum(P[i, j]*qp[j] for j in S) > 0.0)]
+end
+
+"""
+    𝒫_plus(tpt)
+
+The forward-reactive analogue of `𝒫`.
+"""
+function 𝒫_plus(tpt::HomogeneousTPTProblem)
+    S, S_plus, B_true = 𝒮(tpt), 𝒮_plus(tpt), ℬ_true(tpt)
+    P = 𝒫(tpt)
+    qp = forward_committor(tpt)
+
+    P_plus = zeros(size(P))
+    for i in S_plus
+        if i in B_true
+            P_plus[i, B_true] = P[i, B_true]/sum(P[i, k] for k in B_true)
+        else
+            P_plus[i, S_plus] = [P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in S) for j in S_plus]
+        end
+    end
+
+    return P_plus
+end
+
+function remaining_time(tpt::HomogeneousTPTProblem)
+    S, S_plus, B_true, P_plus = 𝒮(tpt), 𝒮_plus(tpt), ℬ_true(tpt), 𝒫_plus(tpt)
+    outside_B = setdiff(S_plus, B_true)
+
+    # solve the linear algebra problem t = P_plus t + b restricted to outside_B
+    M = I - P_plus[outside_B, outside_B]
+    b = fill(1.0, length(outside_B))
+    sol = M\b
+
+    # assign the values to a vector; note that t_rem[B] = 0.0 is already handled
+    t_rem = zeros(length(S))
+    t_rem[outside_B] = sol
+    
+    # trim very small (possibly negative due to floats) values
+    t_rem[abs.(t_rem) .< 1e-16] .= 0.0
+
+    return t_rem       
+end
+
+function reactive_statistics(tpt::HomogeneousTPTProblem)
+    P = 𝒫(tpt)
+    pi_stat, qp, qm = stationary_distribution(tpt), forward_committor(tpt), backward_committor(tpt)
+    S = 𝒮(tpt)
+
+    # reactive density
+    muAB = [qm[i]*pi_stat[i]*qp[i] for i in S]
+
+    # reactive current
+    fij = [qm[i]*pi_stat[i]*P[i, j]*qp[j] for i in S, j in S]
+
+    # forward current
+    fplusij = [max(fij[i, j] - fij[j, i], 0) for i in S, j in S]
+
+    # vanE rate
+    kAB = sum(fij[i, j] for i in A, j in S)
+
+    # vanE time
+    tAB = sum(muAB)/kAB
+
+    # remaining time
+    t_rem = remaining_time(tpt)
+
+    return (muAB, fij, fplusij, kAB, tAB, t_rem)
 end
 
 ############################################################
@@ -169,5 +281,5 @@ P = TransitionMatrix(10)
 tpt = HomogeneousTPTProblem(P, A, B)
 pi_stat = stationary_distribution(tpt)
 q_plus = forward_committor(tpt)
-
-
+q_minus = backward_committor(tpt)
+stats = reactive_statistics(tpt)
