@@ -51,19 +51,21 @@ stats = stationary_statistics(tpt)
 
 ## Citation
 
-Please use the following citation if you use this package in your research.
+!!! note
 
-```
-@article{bonner2023improving,
-  title={Improving the stability of temporal statistics in transition path theory with sparse data},
-  author={Bonner, Gage and Beron-Vera, FJ and Olascoaga, MJ},
-  journal={Chaos: An Interdisciplinary Journal of Nonlinear Science},
-  volume={33},
-  number={6},
-  year={2023},
-  publisher={AIP Publishing}
-}
-```
+    Please use the following citation if you use this package in your research.
+
+    ```
+    @article{bonner2023improving,
+    title={Improving the stability of temporal statistics in transition path theory with sparse data},
+    author={Bonner, Gage and Beron-Vera, FJ and Olascoaga, MJ},
+    journal={Chaos: An Interdisciplinary Journal of Nonlinear Science},
+    volume={33},
+    number={6},
+    year={2023},
+    publisher={AIP Publishing}
+    }
+    ```
 
 Initial development of this package was supported by the National Science Foundation.
 

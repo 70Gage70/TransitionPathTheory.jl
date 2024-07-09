@@ -298,7 +298,7 @@ Compute and return the following statistics in a `NamedTuple`.
 function stationary_statistics(tpt::HomogeneousTPTProblem)
     P = 𝒫(tpt)
     pi_stat, qp, qm = stationary_distribution(tpt), forward_committor(tpt), backward_committor(tpt)
-    S = 𝒮(tpt)
+    S, A = 𝒮(tpt), 𝒜(tpt)
 
     # reactive density
     muAB = [qm[i]*pi_stat[i]*qp[i] for i in S]

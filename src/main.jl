@@ -151,7 +151,7 @@ function TransitionMatrix(P_size::Integer; n_zeros::Integer = 0, normalize::Bool
     @argcheck P_size >= 2
     @argcheck n_zeros >= 0 
 
-    Random.seed!(seed)
+    seed!(seed)
 
     P = rand(P_size, P_size) 
     
