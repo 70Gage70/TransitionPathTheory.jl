@@ -1,24 +1,107 @@
-import Pkg
-Pkg.activate(".")
+"""
+    abstract type TPTProblem
 
-using Graphs: SimpleDiGraph, is_strongly_connected, is_weakly_connected
-using ArgCheck
-using LinearAlgebra: I, normalize, eigvecs
-using StatsBase: sample
+Supertype for all TPT problems.
+"""
+abstract type TPTProblem end
 
+"""
+    abstract type Stochasticity
+
+Supertype for all transition matrix stochasticity types.
+"""
 abstract type Stochasticity end
 
+"""
+    struct SubStochastic
+
+A `Stochasticity` such that the row sums of the transition matrix are all strictly less than 1.
+"""
 struct SubStochastic <: Stochasticity end
+
+"""
+    struct Stochastic
+
+A `Stochasticity` such that the row sums of the transition matrix are all equal to 1.
+"""
 struct Stochastic <: Stochasticity end
+
+"""
+    struct SuperStochastic
+
+A `Stochasticity` such that the row sums of the transition matrix are all strictly greater than 1.
+"""
 struct SuperStochastic <: Stochasticity end 
+
+"""
+    struct NonStochastic
+
+A `Stochasticity` such that the row sums of the transition matrix are incomparable to 1.
+"""
 struct NonStochastic <: Stochasticity end 
 
+"""
+    abstract type Connectivity
+
+Supertype for all transition matrix connectivity types.
+"""
 abstract type Connectivity end 
 
+"""
+    struct StronglyConnected
+
+A `Connectivity` such that the directed graph implied by the transition matrix is [strongly connected](https://en.wikipedia.org/wiki/Connectivity_(graph_theory)#Connected_vertices_and_graphs).
+"""
 struct StronglyConnected <: Connectivity end 
+
+"""
+    struct WeaklyConnected
+
+A `Connectivity` such that the directed graph implied by the transition matrix is [weakly connected](https://en.wikipedia.org/wiki/Connectivity_(graph_theory)#Connected_vertices_and_graphs).
+"""
 struct WeaklyConnected <: Connectivity end 
+
+"""
+    struct Disconnected
+
+A `Connectivity` such that the directed graph implied by the transition matrix is [disconnected](https://en.wikipedia.org/wiki/Connectivity_(graph_theory)#Connected_vertices_and_graphs).
+"""
 struct Disconnected <: Connectivity end 
 
+"""
+    struct TransitionMatrix{S, C}
+
+A transition probability matrix with [`Stochasticity`](@ref) `S` and [`Connectivity`](@ref) `C`.
+
+### Fields 
+
+- `P`: The transition probability `Matrix` itself.
+- `stochasticity`: `S`
+- `connectivity`: `C`
+
+### Constructors
+
+    TransitionMatrix(P_size; n_zeros = 0, normalize = true, seed = 1234)
+
+Construct a randomly generated transition matrix.
+
+Arguments 
+- `P_size`: The number of rows (== columns) of the matrix.
+
+Optional Arguments 
+- `n_zeros`: This many zeros will be placed in the matrix at random. If this results in a row of the matrix having all zeros, a `1` will be placed randomly in that row.
+- `normalize`: Whether to normalize the row sums of the resulting matrix.
+- `seed`: A seed for reproducible randomness.
+
+#
+
+    TransitionMatrix(P)
+
+Construct a `TransitionMatrix` from a matrix `P`. The properties of `P` are inferred automatically.
+
+Arguments 
+- `P`: The transition matrix.
+"""
 struct TransitionMatrix{S<:Stochasticity, C<:Connectivity}
     P::Matrix{Float64}
     stochasticity::S
@@ -64,9 +147,11 @@ function TransitionMatrix(P::Matrix{<:Real})
     return TransitionMatrix(P, stochasticity, connectivity)
 end
 
-function TransitionMatrix(P_size::Integer; n_zeros::Integer = 0, normalize::Bool = true)
+function TransitionMatrix(P_size::Integer; n_zeros::Integer = 0, normalize::Bool = true, seed::Integer = 1234)
     @argcheck P_size >= 2
     @argcheck n_zeros >= 0 
+
+    Random.seed!(seed)
 
     P = rand(P_size, P_size) 
     
@@ -87,232 +172,3 @@ function TransitionMatrix(P_size::Integer; n_zeros::Integer = 0, normalize::Bool
 
     return TransitionMatrix(P)
 end
-
-abstract type TPTProblem end
-
-struct HomogeneousTPTProblem{TM<:TransitionMatrix} <: TPTProblem
-    P::TM
-    source::Vector{Int64}
-    target::Vector{Int64}
-end
-
-function HomogeneousTPTProblem(
-    P::TransitionMatrix, 
-    source::Vector{<:Integer}, 
-    target::Vector{<:Integer}; 
-    avoid::Vector{<:Integer} = Int64[])
-
-    # ensure no repeated indices
-    @argcheck allunique(source)
-    @argcheck allunique(target)
-    @argcheck allunique(avoid)
-
-    # ensure indices take appropriate values
-    n_states = size(P.P, 1)
-    @argcheck all(1 .<= source .<= n_states)
-    @argcheck all(1 .<= target .<= n_states)
-    @argcheck all(1 .<= avoid .<= n_states)
-
-    source = [source ; avoid] |> sort
-    target = [target ; avoid] |> sort
-
-    return HomogeneousTPTProblem(P, source, target)
-end
-
-𝒫(tpt::HomogeneousTPTProblem) = tpt.P.P                          
-𝒜(tpt::HomogeneousTPTProblem) = tpt.source                        
-ℬ(tpt::HomogeneousTPTProblem) = tpt.target                        
-𝒮(tpt::HomogeneousTPTProblem) = collect(1:size(𝒫(tpt),1))    
-Ω(tpt::HomogeneousTPTProblem) = intersect(𝒜(tpt), ℬ(tpt))          
-𝒜_true(tpt::HomogeneousTPTProblem) = setdiff(𝒜(tpt), Ω(tpt))      
-ℬ_true(tpt::HomogeneousTPTProblem) = setdiff(ℬ(tpt), Ω(tpt))      
-𝒞(tpt::HomogeneousTPTProblem) = setdiff(𝒮(tpt), union(𝒜(tpt), ℬ(tpt)))
-
-function stationary_distribution(tpt::HomogeneousTPTProblem)
-    P = 𝒫(tpt)
-
-    if tpt.P.connectivity === StronglyConnected()
-        return normalize(abs.(eigvecs(P')[:,end]), 1)
-    else
-        error("Transition matrix is not strongly connected, so the stationary distribution is not unique.")
-    end
-end
-
-function 𝒫_backwards(tpt::HomogeneousTPTProblem)
-    P, S = 𝒫(tpt), 𝒮(tpt)
-    pi_stat = stationary_distribution(tpt)
-
-    return [(pi_stat[j]/pi_stat[i])*P[j,i] for i in S, j in S]
-end
-
-function forward_committor(tpt::HomogeneousTPTProblem)
-    P, A, B, C = 𝒫(tpt), 𝒜(tpt), ℬ(tpt), 𝒞(tpt)
-
-    # solve the linear algebra problem q = P q + b on the C subspace
-    M = I - P[C, C] 
-    b = [sum(P[i, k] for k in B) for i in C]
-    sol = M\b
-    
-    # assign the values to a vector
-    q = zeros(size(P, 1))
-    q[B] .= 1.0
-    q[A] .= 0.0 # handle A after B since intersection states need to be 0
-    q[C] = sol
-    
-    # trim very small (possibly negative due to floats) values
-    q[abs.(q) .< 1e-16] .= 0.0
- 
-    return q
-end
-
-function backward_committor(tpt::HomogeneousTPTProblem)
-    P_back, A, B, C = 𝒫_backwards(tpt), 𝒜(tpt), ℬ(tpt), 𝒞(tpt)
-
-    # The calculation is identical to q_plus, except we use P_back instead of P 
-    # and switch the roles of A and B
-    M = I - P_back[C, C] 
-    b = [sum(P_back[i, k] for k in A) for i in C]
-    sol = M\b
-    
-    # assign the values to a vector; note that q[B] = 0.0 is already handled
-    q = zeros(size(P_back, 1))
-    q[A] .= 1.0
-    q[B] .= 0.0 # handle B after A since intersection states need to be 0
-    q[C] = sol
-    
-    # trim very small (possibly negative due to floats) values
-    q[abs.(q) .< 1e-16] .= 0.0
-
-    return q      
-end
-
-"""
-    𝒮_plus(tpt)
-
-The set of indices `i` such that
-- if `i` is in `B_true`, then `i` is in `S_plus`
-- if `i` is outside `B_true`, then `i` is in `S_plus` if both 
- - `q_minus[i] > 0.0 `
- - `sum(P[i, j]*qp[j] for j in sets.S) > 0.0`
-
-Intuitively: `i` is either in `B_true`, or could have come from `A_true` and is connected to a state that is reactively connected to `B`.
-"""
-function 𝒮_plus(tpt::HomogeneousTPTProblem)
-    S, B_true = 𝒮(tpt), ℬ_true(tpt)
-    P = 𝒫(tpt)
-    qp, qm = forward_committor(tpt), backward_committor(tpt)
-
-    return [i for i in S if (i in B_true) || (qm[i] > 0.0 && sum(P[i, j]*qp[j] for j in S) > 0.0)]
-end
-
-"""
-    𝒫_plus(tpt)
-
-The forward-reactive analogue of `𝒫`.
-"""
-function 𝒫_plus(tpt::HomogeneousTPTProblem)
-    S, S_plus, B_true = 𝒮(tpt), 𝒮_plus(tpt), ℬ_true(tpt)
-    P = 𝒫(tpt)
-    qp = forward_committor(tpt)
-
-    P_plus = zeros(size(P))
-    for i in S_plus
-        if i in B_true
-            P_plus[i, B_true] = P[i, B_true]/sum(P[i, k] for k in B_true)
-        else
-            P_plus[i, S_plus] = [P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in S) for j in S_plus]
-        end
-    end
-
-    return P_plus
-end
-
-function remaining_time(tpt::HomogeneousTPTProblem)
-    S, S_plus, B_true, P_plus = 𝒮(tpt), 𝒮_plus(tpt), ℬ_true(tpt), 𝒫_plus(tpt)
-    outside_B = setdiff(S_plus, B_true)
-
-    # solve the linear algebra problem t = P_plus t + b restricted to outside_B
-    M = I - P_plus[outside_B, outside_B]
-    b = fill(1.0, length(outside_B))
-    sol = M\b
-
-    # assign the values to a vector; note that t_rem[B] = 0.0 is already handled
-    t_rem = zeros(length(S))
-    t_rem[outside_B] = sol
-    
-    # trim very small (possibly negative due to floats) values
-    t_rem[abs.(t_rem) .< 1e-16] .= 0.0
-
-    return t_rem       
-end
-
-function hitting_location_distribution(tpt::HomogeneousTPTProblem)
-    S, S_plus, B_true, P_plus = 𝒮(tpt), 𝒮_plus(tpt), ℬ_true(tpt), 𝒫_plus(tpt)
-
-    # solve the linear algebra problem r = P_plus r + b restricted to outside_B
-    outside_B = setdiff(S_plus, B_true)
-    M = I - P_plus[outside_B, outside_B]
-
-    # the probability that state i hits B at index j
-    rij = zeros(length(S), length(S))
-    for Bind in B_true
-        b = P_plus[outside_B, Bind]
-        rij[outside_B, Bind] = M\b
-    end
-
-    # starting at any given B_true index, guaranteed to hit that 
-    rij[B_true, B_true] = [i == j ? 1.0 : 0.0 for i = 1:length(B_true), j = 1:length(B_true)]
-    
-    # trim very small (possibly negative due to floats) values
-    rij[abs.(rij) .< 1e-16] .= 0.0
-
-    return rij
-end
-
-function stationary_statistics(tpt::HomogeneousTPTProblem)
-    P = 𝒫(tpt)
-    pi_stat, qp, qm = stationary_distribution(tpt), forward_committor(tpt), backward_committor(tpt)
-    S = 𝒮(tpt)
-
-    # reactive density
-    muAB = [qm[i]*pi_stat[i]*qp[i] for i in S]
-
-    # reactive current
-    fij = [qm[i]*pi_stat[i]*P[i, j]*qp[j] for i in S, j in S]
-
-    # forward current
-    fplusij = [max(fij[i, j] - fij[j, i], 0) for i in S, j in S]
-
-    # vanE rate
-    kAB = sum(fij[i, j] for i in A, j in S)
-
-    # vanE time
-    tAB = sum(muAB)/kAB
-
-    # remaining time
-    t_rem = remaining_time(tpt)
-
-    # hitting locations
-    rij = hitting_location_distribution(tpt)
-
-    return (
-        stationary_distribution = pi_stat, 
-        forward_committor = qp, 
-        backward_committor = qm, 
-        reactive_density = muAB, 
-        reactive_current = fij, 
-        forward_current = fplusij, 
-        reactive_rate = kAB, 
-        reactive_time = tAB, 
-        remaining_time = t_rem,
-        hitting_location_distribution = rij)
-end
-
-############################################################
-
-A = [1, 2, 3]
-B = [3, 4, 5]
-P = TransitionMatrix(10)
-
-tpt = HomogeneousTPTProblem(P, A, B)
-stats = stationary_statistics(tpt)
