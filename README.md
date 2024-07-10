@@ -45,7 +45,7 @@ B = [3, 4, 5]
 
 Then, we set up `HomogeneousTPTProblem` and use `stationary_statistics` and `nonstationary_statistics` to compute all the relevant statistics in a `NamedTuple.`
 
-```
+```julia
 tpt = HomogeneousTPTProblem(P, A, B)
 stats = stationary_statistics(tpt)
 stats_ns = nonstationary_statistics(tpt, 100)  # 100 time step horizon
