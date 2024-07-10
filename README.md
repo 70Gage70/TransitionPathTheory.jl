@@ -35,7 +35,7 @@ using TransitionPathTheory
 
 ## Quickstart
 
-We will use a randomly generated stochastic transition matrix with $10$ states and source $\mathbb{A} = \{1, 2, 3 \}$ and target $\mathbb{B} = {3, 4, 5}$.
+We will use a randomly generated stochastic transition matrix with $10$ states and source $\mathbb{A} = [1, 2, 3]$ and target $\mathbb{B} = [3, 4, 5]$.
 
 ```julia
 P = TransitionMatrix(10)  
