@@ -42,8 +42,8 @@ function HomogeneousTPTProblem(
     @argcheck all(1 .<= target .<= n_states)
     @argcheck all(1 .<= avoid .<= n_states)
 
-    source = [source ; avoid] |> sort
-    target = [target ; avoid] |> sort
+    source = [source ; avoid] |> unique |> sort
+    target = [target ; avoid] |> unique |> sort
 
     return HomogeneousTPTProblem(transition_matrix, source, target)
 end
