@@ -1,5 +1,7 @@
 # TransitionPathTheory.jl
 
+[![Documentation Status](https://img.shields.io/badge/docs-stable-blue?style=flat-square)](https://70gage70.github.io/TransitionPathTheory.jl/)
+
 ## Introduction
 
 This is a package for computing transition path theory[^1] (TPT) statistics a Markov chain on a discrete set $\mathbb{S}$.  All that is required to apply TPT is 
