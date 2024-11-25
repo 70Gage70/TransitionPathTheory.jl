@@ -225,20 +225,20 @@ function 𝒫_plus(tpt::HomogeneousTPTProblem; B_to_S::Symbol = :interior)
 
     P_plus = zeros(size(P))
     for i in S_plus
-        if i in B_true
-            if B_to_S == :interior
-                P_plus[i, B_true] = P[i, B_true]/sum(P[i, k] for k in B_true)
-            elseif B_to_S == :uniform
-                P_plus[i, S_plus] .= 1.0/length(S_plus)
-            elseif B_to_S == :balanced
-                for j in S_plus
-                    P_plus[i, j] = P_plus[j, i]
-                end
-                
-                P_plus[i,S_plus] .= P_plus[i,S_plus]/sum(P_plus[i,S_plus])
+        P_plus[i, S_plus] = [P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in S) for j in S_plus]
+    end
+
+    for i in B_true
+        if B_to_S == :interior
+            P_plus[i, B_true] = P[i, B_true]/sum(P[i, k] for k in B_true)
+        elseif B_to_S == :uniform
+            P_plus[i, S_plus] .= 1.0/length(S_plus)
+        elseif B_to_S == :balanced
+            for j in S_plus
+                P_plus[i, j] = P_plus[j, i]
             end
-        else
-            P_plus[i, S_plus] = [P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in S) for j in S_plus]
+
+            P_plus[i,S_plus] .= P_plus[i,S_plus]/sum(P_plus[i,S_plus])
         end
     end
 
