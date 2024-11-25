@@ -9,6 +9,8 @@ Random.seed!(1234)
     
     tpt = HomogeneousTPTProblem(P, A, B)
     st_stats = stationary_statistics(tpt)
-    ns_stats = nonstationary_statistics(tpt, 10)
+    ns_stats = nonstationary_statistics(tpt, 10, B_to_S = :interior)
+    ns_stats = nonstationary_statistics(tpt, 10, B_to_S = :uniform)
+    ns_stats = nonstationary_statistics(tpt, 10, B_to_S = :balanced)
 end
 

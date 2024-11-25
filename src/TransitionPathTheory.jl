@@ -1,7 +1,7 @@
 module TransitionPathTheory
 
 using Graphs: SimpleDiGraph, is_strongly_connected, is_weakly_connected
-using ArgCheck
+using ArgCheck: @argcheck
 using LinearAlgebra: I, normalize, eigvecs
 using StatsBase: sample
 using Random: seed!

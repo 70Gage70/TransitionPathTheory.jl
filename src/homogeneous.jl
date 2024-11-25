@@ -204,11 +204,21 @@ function 𝒮_plus(tpt::HomogeneousTPTProblem)
 end
 
 """
-    𝒫_plus(tpt)
+    𝒫_plus(tpt; B_to_S = :interior)
 
 The forward-reactive analogue of `𝒫`.
+
+### B_to_S
+
+This controls how the transition probabilities inside `B_true` are defined.
+
+- `:interior`: States in `B_true` transition uniformly to other states in `B_true`. This is the default.
+- `:uniform`: States in `B_true` transition uniformly to `S_plus`.
+- `:balanced`: Transitions `P[B_true, i]` are set equal to `P[i, B_true]` and normalized.
 """
-function 𝒫_plus(tpt::HomogeneousTPTProblem)
+function 𝒫_plus(tpt::HomogeneousTPTProblem; B_to_S::Symbol = :interior)
+    @argcheck B_to_S in [:interior, :uniform, :balanced]
+
     S, S_plus, B_true = 𝒮(tpt), 𝒮_plus(tpt), ℬ_true(tpt)
     P = 𝒫(tpt)
     qp = forward_committor(tpt)
@@ -216,7 +226,17 @@ function 𝒫_plus(tpt::HomogeneousTPTProblem)
     P_plus = zeros(size(P))
     for i in S_plus
         if i in B_true
-            P_plus[i, B_true] = P[i, B_true]/sum(P[i, k] for k in B_true)
+            if B_to_S == :interior
+                P_plus[i, B_true] = P[i, B_true]/sum(P[i, k] for k in B_true)
+            elseif B_to_S == :uniform
+                P_plus[i, S_plus] .= 1.0/length(S_plus)
+            elseif B_to_S == :balanced
+                for j in S_plus
+                    P_plus[i, j] = P_plus[j, i]
+                end
+                
+                P_plus[i,S_plus] .= P_plus[i,S_plus]/sum(P_plus[i,S_plus])
+            end
         else
             P_plus[i, S_plus] = [P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in S) for j in S_plus]
         end
@@ -337,12 +357,7 @@ end
 
 
 """
-    nonstationary_statistics(tpt, horizon)
-
-### Arguments
-
-- `tpt`: The [`TPTProblem`](@ref).
-- `horizon`: The time step at which to cut off the calculation. Note that the `horizon` value does NOT enforce that trajectories leaving A hit B by that time.
+    nonstationary_statistics(tpt, horizon; B_to_S::Symbol = :interior)
 
 Compute and return the following statistics in a `NamedTuple`:
 
@@ -350,11 +365,23 @@ Compute and return the following statistics in a `NamedTuple`:
 - `reactive_density`
 - `t_cdf`
 - `t_cdf_AB`
+
+### Arguments
+
+- `tpt`: The [`TPTProblem`](@ref).
+- `horizon`: The time step at which to cut off the calculation. Note that the `horizon` value does NOT enforce that trajectories leaving A hit B by that time.
+
+### Optional Arguments
+
+- `B_to_S`: Passed directly to [`𝒫_plus`](@ref).
 """
-function nonstationary_statistics(tpt::HomogeneousTPTProblem, horizon::Integer)
+function nonstationary_statistics(
+    tpt::HomogeneousTPTProblem, 
+    horizon::Integer; 
+    B_to_S::Symbol = :interior)
     @argcheck horizon >= 1
 
-    P, P_plus = 𝒫(tpt), 𝒫_plus(tpt)
+    P, P_plus = 𝒫(tpt), 𝒫_plus(tpt, B_to_S = B_to_S)
     A_true, B_true, S, S_plus = 𝒜_true(tpt), ℬ_true(tpt), 𝒮(tpt), 𝒮_plus(tpt)
 
     i0 = [i in A_true ? 1.0/length(A_true) : 0.0 for i in S] # uniform distribution supported on A_true
