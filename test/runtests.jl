@@ -12,5 +12,10 @@ Random.seed!(1234)
     ns_stats = nonstationary_statistics(tpt, 10, B_to_S = :interior)
     ns_stats = nonstationary_statistics(tpt, 10, B_to_S = :uniform)
     ns_stats = nonstationary_statistics(tpt, 10, B_to_S = :balanced)
+    ns_stats = nonstationary_statistics(tpt, 10, initial_dist = :uniform)
+    ns_stats = nonstationary_statistics(tpt, 10, initial_dist = :stat)
+
+    f = st_stats.forward_current
+    current2arrows(f, [rand(2) for i = 1:size(f, 1) - 1])
 end
 

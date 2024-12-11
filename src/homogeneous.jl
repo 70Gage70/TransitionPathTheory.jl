@@ -374,17 +374,28 @@ Compute and return the following statistics in a `NamedTuple`:
 ### Optional Arguments
 
 - `B_to_S`: Passed directly to [`𝒫_plus`](@ref).
+- `initial_dist`: A `Symbol` determining how the initial distribution inside `𝒜` has calculated.
+  - `:uniform`: A uniform distribution supported on `𝒜`.
+  - `:stat`: The initial distribution is equal to stationary distribution of `𝒫(tpt)` restricted `𝒜`.
 """
 function nonstationary_statistics(
     tpt::HomogeneousTPTProblem, 
     horizon::Integer; 
-    B_to_S::Symbol = :interior)
+    B_to_S::Symbol = :interior,
+    initial_dist::Symbol = :uniform)
     @argcheck horizon >= 1
+    @argcheck initial_dist ∈ [:uniform, :stat]
 
     P, P_plus = 𝒫(tpt), 𝒫_plus(tpt, B_to_S = B_to_S)
     A_true, B_true, S, S_plus = 𝒜_true(tpt), ℬ_true(tpt), 𝒮(tpt), 𝒮_plus(tpt)
 
-    i0 = [i in A_true ? 1.0/length(A_true) : 0.0 for i in S] # uniform distribution supported on A_true
+    if initial_dist == :uniform
+        i0 = [i in A_true ? 1.0/length(A_true) : 0.0 for i in S]
+    elseif initial_dist == :stat
+        π_stat = stationary_distribution(tpt)
+        i0 = [i in A_true ? π_stat[i] : 0.0 for i in S]
+        i0 = i0/sum(i0)
+    end
 
     density = Vector{Float64}[]
     push!(density, i0)

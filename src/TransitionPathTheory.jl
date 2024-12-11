@@ -20,6 +20,9 @@ export stationary_distribution, 𝒫_backwards, forward_committor, backward_comm
 export 𝒮_plus, 𝒫_plus, remaining_time, hitting_location_distribution
 export stationary_statistics, nonstationary_statistics
 
+include("helpers.jl")
+export current2arrows
+
 @compile_workload begin
     A = [1, 2, 3]
     B = [3, 4, 5]
