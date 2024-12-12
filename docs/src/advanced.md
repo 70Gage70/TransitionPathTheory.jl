@@ -78,3 +78,9 @@ backward_committor
 remaining_time
 hitting_location_distribution
 ```
+
+## Helpers
+
+```@docs; canonical=false
+current2arrows
+```
