@@ -19,11 +19,14 @@ Return `(u, v)` where `u[i]` and `v[i]` are the `x` and `y` components of vector
 """
 function current2arrows(
     f::Matrix{<:Real}, 
-    points::Vector{<:Vector{<:Real}};
+    x::Vector{<:Real},
+    y::Vector{<:Real};
     excluded::Union{Nothing, Vector{<:Integer}} = nothing)
 
+    @argcheck length(x) == length(y) "x and y must be the same length"
     @argcheck size(f, 1) == size(f, 2) "f must be a square matrix"
     f_size = size(f, 1)
+    n_points = length(x)
 
     if isnothing(excluded)
         idx = collect(1:f_size - 1) 
@@ -32,10 +35,10 @@ function current2arrows(
         idx = setdiff(1:f_size, excluded)
     end
 
-    @argcheck length(idx) == length(points) "must have as many points as valid f indices"
+    @argcheck length(idx) == n_points "must have as many points as valid f indices"
  
     f_tilde = view(f, idx, idx)
-    uv = [sum(f_tilde[i,j]*normalize(points[j] - points[i]) for j = setdiff(1:length(points), [i])) for i = 1:length(points)]
+    uv = [sum(f_tilde[i,j]*normalize([x[j] - x[i], y[j] - y[i]]) for j = setdiff(1:n_points, [i])) for i = 1:n_points]
 
     return ((x -> x[1]).(uv), (x -> x[2]).(uv))
 end
