@@ -204,41 +204,20 @@ function 𝒮_plus(tpt::HomogeneousTPTProblem)
 end
 
 """
-    𝒫_plus(tpt; B_to_S = :interior)
+    𝒫_plus(tpt)
 
 The forward-reactive analogue of `𝒫`.
-
-### B_to_S
-
-This controls how the transition probabilities inside `B_true` are defined.
-
-- `:interior`: States in `B_true` transition uniformly to other states in `B_true`. This is the default.
-- `:uniform`: States in `B_true` transition uniformly to `S_plus`.
-- `:balanced`: Transitions `P[B_true, i]` are set equal to `P[i, B_true]` and normalized.
 """
 function 𝒫_plus(tpt::HomogeneousTPTProblem; B_to_S::Symbol = :interior)
     @argcheck B_to_S in [:interior, :uniform, :balanced]
 
-    S, S_plus, B_true = 𝒮(tpt), 𝒮_plus(tpt), ℬ_true(tpt)
-    P = 𝒫(tpt)
-    qp = forward_committor(tpt)
+    S, P, qp = 𝒮(tpt), 𝒫(tpt), forward_committor(tpt)
 
     P_plus = zeros(size(P))
-    for i in S_plus
-        P_plus[i, S_plus] = [P[i, j]*qp[j]/sum(P[i, k]*qp[k] for k in S) for j in S_plus]
-    end
-
-    for i in B_true
-        if B_to_S == :interior
-            P_plus[i, B_true] = P[i, B_true]/sum(P[i, k] for k in B_true)
-        elseif B_to_S == :uniform
-            P_plus[i, S_plus] .= 1.0/length(S_plus)
-        elseif B_to_S == :balanced
-            for j in S_plus
-                P_plus[i, j] = P_plus[j, i]
-            end
-
-            P_plus[i,S_plus] .= P_plus[i,S_plus]/sum(P_plus[i,S_plus])
+    for i in S
+        denom = sum(P[i, k]*qp[k] for k in S)
+        if denom > 0
+            P_plus[i, S] = [P[i, j]*qp[j]/denom for j in S]
         end
     end
 
@@ -357,14 +336,13 @@ end
 
 
 """
-    nonstationary_statistics(tpt, horizon; B_to_S::Symbol = :interior)
+    nonstationary_statistics(tpt, horizon; B_to_S::Symbol = :interior, initial_dist = :stat)
 
 Compute and return the following statistics in a `NamedTuple`:
 
 - `density`
 - `reactive_density`
-- `t_cdf`
-- `t_cdf_AB`
+- `tAB_cdf`
 
 ### Arguments
 
@@ -373,21 +351,20 @@ Compute and return the following statistics in a `NamedTuple`:
 
 ### Optional Arguments
 
-- `B_to_S`: Passed directly to [`𝒫_plus`](@ref).
 - `initial_dist`: A `Symbol` determining how the initial distribution inside `𝒜` has calculated.
-  - `:uniform`: A uniform distribution supported on `𝒜`.
   - `:stat`: The initial distribution is equal to stationary distribution of `𝒫(tpt)` restricted `𝒜`.
+  - `:uniform`: A uniform distribution supported on `𝒜`.
 """
 function nonstationary_statistics(
     tpt::HomogeneousTPTProblem, 
     horizon::Integer; 
-    B_to_S::Symbol = :interior,
-    initial_dist::Symbol = :uniform)
+    initial_dist::Symbol = :stat)
     @argcheck horizon >= 1
     @argcheck initial_dist ∈ [:uniform, :stat]
 
-    P, P_plus = 𝒫(tpt), 𝒫_plus(tpt, B_to_S = B_to_S)
-    A_true, B_true, S, S_plus = 𝒜_true(tpt), ℬ_true(tpt), 𝒮(tpt), 𝒮_plus(tpt)
+    P, P_plus = 𝒫(tpt), 𝒫_plus(tpt)
+    q_plus = forward_committor(tpt)
+    A_true, B_true, C, S, S_plus = 𝒜_true(tpt), ℬ_true(tpt), 𝒞(tpt), 𝒮(tpt), 𝒮_plus(tpt)
 
     if initial_dist == :uniform
         i0 = [i in A_true ? 1.0/length(A_true) : 0.0 for i in S]
@@ -403,29 +380,25 @@ function nonstationary_statistics(
     reactive_density = Vector{Float64}[]
     push!(reactive_density, i0)
 
-    outside_B = setdiff(S_plus, B_true)
-    t_cdf = Vector{Float64}[]
-    push!(t_cdf, [i in outside_B ? sum(P_plus[i, j] for j in B_true) : i in B_true ? 1.0 : 0.0 for i in S])
+    Q = [i0[α]*sum(P[α, L]*q_plus[L] for L in S)/(sum(i0[m]*sum(P[m, L]*q_plus[L] for L in S) for m in A_true)) for α in A_true]
+    b_star = fill(1.0, length(B_true))
+    tAB_cdf = Float64[]
+    push!(tAB_cdf, Q' * P_plus[A_true, B_true] * b_star)
 
-    for _ = 2:horizon
+    for t = 2:horizon
         # density
         push!(density, transpose(P) * density[end])
 
         # normalized reactive density
         push!(reactive_density, transpose(P_plus) * reactive_density[end])
 
-        # hitting time distribution
-        t_cdf_next = [i in B_true ? 1.0 : 0.0 for i in S]
-        t_cdf_next[outside_B] .= t_cdf[1][outside_B] + P_plus[outside_B, outside_B] * t_cdf[end][outside_B]
-        push!(t_cdf, t_cdf_next)
+        # tAB cdf
+        push!(tAB_cdf, tAB_cdf[t - 1] + Q' * P_plus[A_true, C] * P_plus[C, C]^(t - 2) * P_plus[C, B_true] * b_star)
     end
-
-    # create time cdf for A to B
-    t_cdf_AB = [sum(i0[i]*t_cdf[n][i] for i in A_true) for n = 1:horizon]
 
     return (
         density = density, 
         reactive_density = reactive_density, 
-        t_cdf = t_cdf, 
-        t_cdf_AB = t_cdf_AB)
+        tAB_cdf = tAB_cdf
+        )
 end
